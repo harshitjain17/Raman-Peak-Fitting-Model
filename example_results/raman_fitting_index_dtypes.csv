@@ -1,0 +1,13 @@
+,dtypes
+rfID,object
+FileStem,object
+FilePath,object
+SampleID,object
+SamplePos,int64
+SampleGroup,object
+FileCreationDate,object
+FileCreation,datetime64[ns]
+FileModDate,object
+FileMod,datetime64[ns]
+FileSize,int64
+DestDir,object
