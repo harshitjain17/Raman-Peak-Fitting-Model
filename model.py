@@ -98,10 +98,14 @@ from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
 
 
-# This function first splits the filename by the - character,
-# and then concatenates the first two parts of the resulting list to form the sample_id
-# The position information is extracted from the last part of the list by splitting by the . character and taking the first part of the resulting list.
-def extract_sample_id_and_position(filename):
+'''
+This function first splits the filename by the - character, and then concatenates the first two parts of the resulting list to form the sample_id
+The position information is extracted from the last part of the list by splitting by the . character and taking the first part of the resulting list.
+It takes a filename as input and returns the sample ID and position extracted from the filename
+'''
+# The function is designed to extract the sample ID and position information from the filename
+# Following format: <Sample ID>-Analysis-GC-and-PC-<Position>.xlsx
+def extract_sample_id_and_position(filename): # filename: a string representing the name of a file
     parts = filename.split('-')
     sample_id = '-'.join(parts[:2])
     position = parts[-1].split('.')[0]
@@ -111,6 +115,7 @@ def extract_sample_id_and_position(filename):
 
 
 # This function is responsible for preprocessing the raw spectral data in preparation for fitting
+# It takes the spectral data as input and returns the preprocessed spectral data
 def preprocess_spectral_data(spectral_data):
     
     # Remove any NaN values
@@ -128,32 +133,54 @@ def preprocess_spectral_data(spectral_data):
 
 
 
-
+# This function performs a fitting on the spectral data with the specified model
+# It takes the spectral data and the model name as input and returns the fit parameters
 def perform_fitting(spectral_data, model):
     fitter = Fitting(model=model)
-    fitter.fit(spectral_data[0], spectral_data[1])
+    fitter.fit(spectral_data[0], spectral_data[1]) # passing the x-values (spectral_data[0]) and y-values (spectral_data[1]) of the spectral data as arguments
     return fitter.fit_params
 
 
 
 
+# This function takes the sample ID, position, spectral data, and fit parameters as input and,
+# exports the results as an excel file and a plot
 def export_results(sample_id, position, spectral_data, fit_params):
     
-    fig, ax = plt.subplots()
-    ax.plot(spectral_data[0], spectral_data[1], label='data')
-    ax.plot(spectral_data[0], fit_params.best_fit, label='fit')
-    ax.legend()
+    # creates a new figure object and an axis object to create a plot of the spectral data and the fit results
+    figure, axis = plt.subplots()
     
-    # Plotting
+    # plots the original spectral data on the axis
+    axis.plot(spectral_data[0], spectral_data[1], label='data')
+
+    # plots the fit results on the axis
+    axis.plot(spectral_data[0], fit_params.best_fit, label='fit')
+    
+    # adds a legend to the plot to distinguish between the original spectral data and the fit results
+    axis.legend()
+    
+    # sets the label of the x-axis to 'Raman shift (cm-1)'
     plt.xlabel('Raman shift (cm-1)')
+
+    # sets the label of the y-axis to 'Intensity (a.u.)'
     plt.ylabel('Intensity (a.u.)')
+
+    # sets the title of the plot to 'Sample <Sample ID>, position <Position>'
     plt.title(f'Sample {sample_id}, position {position}')
+
+    # saves the plot as a PNG image, with the file name '<Sample ID>_<Position>.png'
     plt.savefig(f'{sample_id}_{position}.png')
+
+    # exports the fit parameters as an Excel file, with the file name '<Sample ID>_<Position>_fit_params.xlsx'
     fit_params.to_excel(f'{sample_id}_{position}_fit_params.xlsx')
 
 
 
-
+# It loops through all the .xlsx files in the specified data_folder,
+# extracts the sample ID and position,
+# preprocesses the spectral data,
+# performs the fitting,
+# and exports the results
 if __name__ == '__main__':
     
     data_folder = 'Examples_raman_of_carbon'
