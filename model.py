@@ -1,93 +1,12 @@
-# import numpy as np
-# from scipy.signal import find_peaks
-# from scipy.optimize import curve_fit
-# import os
+'''
+This is a Python script for processing Raman spectral data.
+The script does the following operations on each .xlsx file in a specified directory:
 
-# # Gaussian Curve - defining peak shapes
-# def gaussian(x, A, mu, sigma):
-#     return A * np.exp(-(x - mu) ** 2 / (2 * sigma ** 2))
-
-# # Lorentzian Curve - defining peak shapes
-# def lorentzian(x, A, mu, gamma):
-#     return A * gamma / ((x - mu) ** 2 + gamma ** 2)
-
-
-# def composite_peak(x, A1, mu1, sigma1, A2, mu2, sigma2):
-#     return gaussian(x, A1, mu1, sigma1) + gaussian(x, A2, mu2, sigma2)
-
-# # Fits the spectrum to a model function with the given initial guess
-# def fit_spectrum(x, y, model_func, initial_guess):
-#     popt, pcov = curve_fit(model_func, x, y, p0=initial_guess)
-#     return popt
-
-
-# def deconvolve_spectrum(x, y):
-#     peaks, _ = find_peaks(y)
-#     popt_list = []
-#     for peak in peaks:
-#         peak_x = x[peak]
-#         initial_guess = [y[peak], peak_x, 1]
-#         popt = fit_spectrum(x, y, gaussian, initial_guess)
-#         popt_list.append(popt)
-#     return popt_list
-
-# # Processing the spectrum
-# def process_spectrum(spectrum_path):
-#     x, y = np.loadtxt(spectrum_path, delimiter=',', unpack=True)
-#     popt_list = deconvolve_spectrum(x, y)
-#     return popt_list
-
-# # Data File Processing
-# def process_folder(folder_path):
-#     file_list = os.listdir(folder_path)
-#     result = []
-#     for file_name in file_list:
-#         if file_name.endswith('.csv'):
-#             file_path = os.path.join(folder_path, file_name)
-#             result.append(process_spectrum(file_path))
-#     return result
-
-# # Main Function
-# folder_path = '/path/to/spectrum/folder'
-# result = process_folder(folder_path)
-# print(result)
-
-
-def main():
-    
-    # Create the models
-    models = [
-        models.LorentzianModel(),
-        models.GaussianModel(),
-        models.VoigtModel(),
-        ...
-    ]
-    
-    # Create the index
-    index = []
-    folder = 'data'
-    for file in os.listdir(folder):
-        sample_id, position = extract_sample_id_and_position(file)
-        index.append((sample_id, position, os.path.join(folder, file)))
-    index = pd.DataFrame(index, columns=['Sample ID', 'Position', 'File'])
-    
-    # Loop over the index
-    for i, row in index.iterrows():
-        x, y = load_data(row['File'])
-        x, y = preprocess(x, y)
-        for model in models:
-            result = model.fit(x, y)
-            # Plot the results
-            result.plot()
-            plt.show()
-            # Save the results to an Excel file
-            result.save('results.xlsx')
-
-if __name__ == '__main__':
-    main()
-
-
-
+1. Extracts the sample ID and position information from the file name.
+2. Preprocesses the raw spectral data by removing NaN values, applying Savitzky-Golay smoothing, and normalizing the data to values between 0 and 1.
+3. Fits the preprocessed spectral data to a specified model.
+4. Exports the fit parameters as an Excel file and saves a plot of the original spectral data and the fit results as a PNG image.
+'''
 
 
 import os
@@ -176,25 +95,39 @@ def export_results(sample_id, position, spectral_data, fit_params):
 
 
 
-# It loops through all the .xlsx files in the specified data_folder,
-# extracts the sample ID and position,
-# preprocesses the spectral data,
-# performs the fitting,
-# and exports the results
+
+
+'''
+It loops through all the .xlsx files in the specified data_folder,
+extracts the sample ID and position,
+preprocesses the spectral data,
+performs the fitting,
+and exports the results
+'''
+# Main function
 if __name__ == '__main__':
     
-    data_folder = 'Examples_raman_of_carbon'
-    model = 'model_1'
-    data_index = []
+    data_folder = 'Examples_raman_of_carbon' # contains the Excel files containing the spectral data
+    model = 'model_1' # the name of the model to be used for the fitting
+    data_index = [] 
     
+    # iterates over the names of all the files in the data_folder directory
     for filename in os.listdir(data_folder):
         if filename.endswith('.xlsx'):
-            sample_id, position = extract_sample_id_and_position(filename)
+            (sample_id, position) = extract_sample_id_and_position(filename) # extracts sample_id, position from the filename
             data_index.append((sample_id, position))
     
+    # converts the data_index list into a Pandas DataFrame and sets the column names to 'Sample ID' and 'Position'
     data_index = pd.DataFrame(data_index, columns=['Sample ID', 'Position'])
     
+    # iterates over the rows of the data_index DataFrame
+    # The 'i' variable holds the index of the current row
+    # the 'row' variable holds the current row as a Series
     for i, row in data_index.iterrows():
+
+        # spectral data is read from the file, the file path is constructed using 'os.path.join', the result is assigned to 'spectral_data'
         spectral_data = preprocess_spectral_data(pd.read_excel(os.path.join(data_folder, f'{row["Sample ID"]}-Analysis-GC-and-PC.xlsx')))
+        
         fit_params = perform_fitting(spectral_data, model)
+        
         export_results(row['Sample ID'], row['Position'], spectral_data, fit_params)
