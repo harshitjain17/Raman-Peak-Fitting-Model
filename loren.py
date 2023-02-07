@@ -18,6 +18,7 @@
 
 import os
 import numpy as np
+import pandas as pd
 from ramanfitter import RamanFitter
 from ramanfitter.mapper import Mapper
 
@@ -42,10 +43,10 @@ raman_fitter = RamanFitter(
 
 ''' Each step ran when autorun = False '''
 
-# normalizes `y` data to 1
+# Normalizes `y` data to 1
 raman_fitter.NormalizeData()
 
-# removes noise from input data
+# Removes noise from input data
 raman_fitter.Denoise(
         UseFFT          = True,     # a Fast Fourier Transform will be used to cutoff higher frequency noise and transformed back
         FFT_PS_Cutoff   = 1./1200., # this value is used to differentiate between noise and data
@@ -55,7 +56,7 @@ raman_fitter.Denoise(
         ShowPlot        = True      # this will show a plot of the smoothed data
     )
 
-# find the peaks in the data
+# Find the peaks in the data
 raman_fitter.FindPeaks(
         DistBetweenPeaks = 50,  # minimum distance between peaks, in terms of data points
         showPlot         = True # this will show a plot of the found peaks
@@ -70,7 +71,7 @@ you will need to loop through raman_fitter.params and update each curve's parame
 #     # update each curve's parameter individually
 #     param.value = updated_value
 
-# fits the data with associated curve types
+# Fits the data with associated curve types
 raman_fitter.FitData(
         type     = 'Lorentzian', # which type of curve to use for peak - options are 'Lorentzian', 'Gaussian', and 'Voigt'
         showPlot = True          # this will show a plot of the fit data
@@ -80,3 +81,13 @@ raman_fitter.FitData(
 components  = raman_fitter.comps      # Returns a dictionary of each curve plot
 curveParams = raman_fitter.params     # Returns a dictionary of the parameters of each Lorentzian, Gaussian, or Voigt curve
 bestFitLine = raman_fitter.fit_line   # Returns the plot data of the model
+
+'''
+This will create an .xlsx file named fitted_data.xlsx in the current working directory with three columns:
+Raman Shift, Intensity, and Best Fit Line.
+'''
+# Create a DataFrame from the data
+df = pd.DataFrame({'Raman Shift': raman_shift, 'Intensity': intensity, 'Best Fit Line': bestFitLine})
+
+# Export the DataFrame to an .xlsx file
+df.to_excel('fitted_data.xlsx', index=False)
