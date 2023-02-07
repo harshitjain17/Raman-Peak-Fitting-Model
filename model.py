@@ -23,7 +23,7 @@ The position information is extracted from the last part of the list by splittin
 It takes a filename as input and returns the sample ID and position extracted from the filename
 '''
 # The function is designed to extract the sample ID and position information from the filename
-# Following format: <Sample ID>-Analysis-GC-and-PC-<Position>.xlsx
+# Following format: <Sample ID>-Analysis-GC-and-PC-<Position>.txt
 def extract_sample_id_and_position(filename): # filename: a string representing the name of a file
     parts = filename.split('-')
     sample_id = '-'.join(parts[:2])
@@ -108,12 +108,12 @@ and exports the results
 if __name__ == '__main__':
     
     data_folder = 'Examples_raman_of_carbon' # contains the Excel files containing the spectral data
-    model = 'model_1' # the name of the model to be used for the fitting
+    model = 'GC-532nm-10' # the name of the model to be used for the fitting
     data_index = [] 
     
     # iterates over the names of all the files in the data_folder directory
     for filename in os.listdir(data_folder):
-        if filename.endswith('.xlsx'):
+        if filename.endswith('.txt'):
             (sample_id, position) = extract_sample_id_and_position(filename) # extracts sample_id, position from the filename
             data_index.append((sample_id, position))
     
