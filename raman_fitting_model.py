@@ -1,21 +1,3 @@
-# # Define initial parameters for the peaks
-# # amplitude, center, fwhm, x-min, x-max
-# peak_params = [
-#     [1000, 200, 10, 150, 250],
-#     [500, 300, 15, 250, 350]
-# ]
-
-# # # Define the parameters for the peaks
-# # peaks = [
-# #     {'type': 'Lorentzian', 'amplitude': 1000, 'x': 500, 'FWHM': 10},
-# #     {'type': 'Gaussian', 'amplitude': 2000, 'x': 700, 'FWHM': 20},
-# #     {'type': 'Voigt', 'amplitude': 1500, 'x': 600, 'FWHM_L': 15, 'FWHM_G': 25}
-# # ]
-
-# # # Fit the data with the defined peaks
-# # fit = ramanfitter.fit(x, y_corr, peaks)
-
-
 import os
 import numpy as np
 import pandas as pd
@@ -28,6 +10,20 @@ data = np.genfromtxt(filename) # Open File
 # Extract the Raman shift and intensity values
 raman_shift = data[:, 0] # Parse x-values - typically cm^-1 or nm values
 intensity   = data[:, 1] # Parse y-values - typically intensity or counts
+
+
+# Load the user input for the bounds of the center of the peak from an Excel file
+bounds_df = pd.read_excel('center_bounds.xlsx')
+
+# Create a dictionary to store the bounds for each peak
+center_bounds = {}
+
+# Loop through the rows of the input file and extract the bounds for each peak
+for i, row in bounds_df.iterrows():
+    peak_index = int(row['Peak Index'])
+    center_min = row['Center Min']
+    center_max = row['Center Max']
+    center_bounds[peak_index] = [center_min, center_max]
 
 raman_fitter = RamanFitter(
         x            = raman_shift, # a 1D array of the x-axis values
@@ -58,29 +54,32 @@ raman_fitter.Denoise(
 
 # Find the peaks in the data
 raman_fitter.FindPeaks(
+        center_bounds    = center_bounds, # a dict center_bounds[peak_index] = [center_min, center_max] for bounds to find peak
         DistBetweenPeaks = 50,  # minimum distance between peaks, in terms of data points
         showPlot         = True # this will show a plot of the found peaks
     )
 
 
-''' 
-If you want to update the parameters for all curves,
-you will need to loop through raman_fitter.params and update each curve's parameters individually.
-'''
-# for param_name, param in raman_fitter.params.items():
-#     # update each curve's parameter individually
-#     param.value = updated_value
+# # Loop through the peaks and set the bounds for the center of the peak
+# for param in raman_fitter.params:
+#     if i in center_bounds:
+#         center_min, center_max = center_bounds[i]
+#         param.set('center', center_min, center_max)
+
 
 # Fits the data with associated curve types
 raman_fitter.FitData(
-        type     = 'Lorentzian', # which type of curve to use for peak - options are 'Lorentzian', 'Gaussian', and 'Voigt'
+        type     = 'Voigt', # which type of curve to use for peak - options are 'Lorentzian', 'Gaussian', and 'Voigt'
         showPlot = True          # this will show a plot of the fit data
     )
 
 
-components  = raman_fitter.comps      # Returns a dictionary of each curve plot
+# components  = raman_fitter.comps      # Returns a dictionary of each curve plot
 curveParams = raman_fitter.params     # Returns a dictionary of the parameters of each Lorentzian, Gaussian, or Voigt curve
 bestFitLine = raman_fitter.fit_line   # Returns the plot data of the model
+
+for i in curveParams:
+    print (f'{i} : {curveParams[i]} ' , end="\n")
 
 '''
 This will create an .xlsx file named fitted_data.xlsx in the current working directory with three columns:
