@@ -20,7 +20,7 @@ center_bounds = {}
 
 # Loop through the rows of the input file and extract the bounds for each peak
 for i, row in bounds_df.iterrows():
-    peak_index = int(row['Peak Index'])
+    peak_index = row['Peak Index']
     center_min = row['Center Min']
     center_max = row['Center Max']
     center_bounds[peak_index] = [center_min, center_max]
@@ -29,11 +29,11 @@ raman_fitter = RamanFitter(
         x            = raman_shift, # a 1D array of the x-axis values
         y            = intensity,   # a 1D array of the y-axis values
         autorun      = False,       # attempt to calculate all steps and fit a model
-        threshold    = 12.,         # helps the code determine what is a worthy peak and what isn't
-        PercentRange = 0.2,         # determines what percent error the fit model can have in regards to the amplitude and position of fit curves under found peaks
+        threshold    = 12,          # helps the code determine what is a worthy peak and what isn't
+        PercentRange = 0.11,        # determines what percent error the fit model can have in regards to the amplitude and position of fit curves under found peaks
         Sigma        = 15,          # the expected width of fit curves, in terms of data points
         SigmaMin     = 3,           # the expected minimum width allowed of fit curves, in terms of data points
-        SigmaMax     = 100          # the expected maximum width allowed of fit curves, in terms of data points
+        SigmaMax     = 200          # the expected maximum width allowed of fit curves, in terms of data points
     )
 
 
@@ -55,16 +55,9 @@ raman_fitter.Denoise(
 # Find the peaks in the data
 raman_fitter.FindPeaks(
         center_bounds    = center_bounds, # a dict center_bounds[peak_index] = [center_min, center_max] for bounds to find peak
-        DistBetweenPeaks = 50,  # minimum distance between peaks, in terms of data points
+        DistBetweenPeaks = 1,  # minimum distance between peaks, in terms of data points
         showPlot         = True # this will show a plot of the found peaks
     )
-
-
-# # Loop through the peaks and set the bounds for the center of the peak
-# for param in raman_fitter.params:
-#     if i in center_bounds:
-#         center_min, center_max = center_bounds[i]
-#         param.set('center', center_min, center_max)
 
 
 # Fits the data with associated curve types
@@ -78,15 +71,46 @@ raman_fitter.FitData(
 curveParams = raman_fitter.params     # Returns a dictionary of the parameters of each Lorentzian, Gaussian, or Voigt curve
 bestFitLine = raman_fitter.fit_line   # Returns the plot data of the model
 
-for i in curveParams:
-    print (f'{i} : {curveParams[i]} ' , end="\n")
+# for i in curveParams:
+#     print (f'{i} : {curveParams[i]} ' , end="\n")
 
 '''
 This will create an .xlsx file named fitted_data.xlsx in the current working directory with three columns:
 Raman Shift, Intensity, and Best Fit Line.
 '''
 # Create a DataFrame from the data
-df = pd.DataFrame({'Raman Shift': raman_shift, 'Intensity': intensity, 'Best Fit Line': bestFitLine})
+df = pd.DataFrame({'Raman Shift': raman_shift, 'Intensity': intensity, 'Best Fit Line': bestFitLine, 'Residual': (bestFitLine - intensity)})
 
 # Export the DataFrame to an .xlsx file
 df.to_excel('fitted_data.xlsx', index=False)
+
+
+
+
+'''
+ABOUT THRESHOLD:
+
+The threshold parameter is used to specify the minimum intensity threshold that a Raman peak must meet in order to be
+detected and fitted.
+
+When fitting Raman spectra, it is often necessary to set a threshold to filter out noise or unwanted signals that may be
+present in the data. The threshold parameter allows you to specify a minimum intensity value that a peak must have in order
+to be considered significant enough to be fitted.
+
+Any peaks in the Raman spectrum that do not meet this threshold will be ignored and not included in the final fit.
+Setting an appropriate threshold can help to improve the accuracy and reliability of Raman peak fitting by filtering out
+low-intensity or noise-related peaks that may not be relevant to the sample being analyzed.
+
+The threshold parameter is typically specified as a numerical value, representing the minimum intensity threshold required
+for peak detection and fitting. The specific value used may depend on the characteristics of the Raman spectrum and the
+specific analysis being performed.
+
+
+ABOUT GAMMA:
+
+The gamma parameter in the RamanFitter library in Python is a parameter that is used to model the linewidth of a Raman peak.
+The gamma parameter is typically used in conjunction with other parameters, such as the peak position, intensity, and shape,
+to model the Raman spectrum of a sample. The gamma parameter determines the width of the Raman peak in the fitted spectrum,
+with larger values of gamma resulting in broader peaks. The gamma parameter can be set manually in the RamanFitter library or
+can be automatically determined by the fitting algorithm.
+'''
