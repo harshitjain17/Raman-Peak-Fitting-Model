@@ -43,14 +43,14 @@ raman_fitter = RamanFitter(
 raman_fitter.NormalizeData()
 
 # Removes noise from input data
-raman_fitter.Denoise(
-        UseFFT          = True,     # a Fast Fourier Transform will be used to cutoff higher frequency noise and transformed back
-        FFT_PS_Cutoff   = 1./1200., # this value is used to differentiate between noise and data
-        UseSavgol       = True,     # this function will implement a Savitzky Golay filter to remove noise
-        SavgolWindow    = 25,       # how many datapoints to iterate over in the Savitzky Golay filter
-        SavgolOrder     = 3,        # what order of polynomial to use for the designated Savitzky Golay filter window
-        ShowPlot        = True      # this will show a plot of the smoothed data
-    )
+# raman_fitter.Denoise(
+#         UseFFT          = True,     # a Fast Fourier Transform will be used to cutoff higher frequency noise and transformed back
+#         FFT_PS_Cutoff   = 1./1200., # this value is used to differentiate between noise and data
+#         UseSavgol       = True,     # this function will implement a Savitzky Golay filter to remove noise
+#         SavgolWindow    = 25,       # how many datapoints to iterate over in the Savitzky Golay filter
+#         SavgolOrder     = 3,        # what order of polynomial to use for the designated Savitzky Golay filter window
+#         ShowPlot        = True      # this will show a plot of the smoothed data
+#     )
 
 # Find the peaks in the data
 raman_fitter.FindPeaks(
