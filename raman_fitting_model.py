@@ -66,7 +66,7 @@ raman_fitter.FindPeaks(
 
 # Fits the data with associated curve types
 raman_fitter.FitData(
-        type     = 'Gaussian', # which type of curve to use for peak - options are 'Lorentzian', 'Gaussian', and 'Voigt'
+        type     = 'Voigt', # which type of curve to use for peak - options are 'Lorentzian', 'Gaussian', and 'Voigt'
         showPlot = True     # this will show a plot of the fit data
     )
 
