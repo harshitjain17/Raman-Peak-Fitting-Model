@@ -321,7 +321,10 @@ class RamanFitter:
         #     plt.show()
 
     # Fit the Data to a Lorentzian, Gaussian, or Voigt model
-    def FitData( self, type = 'Lorentzian', showPlot = False ):
+    def FitData( self,
+                # type = 'Lorentzian',
+                center_bounds,
+                showPlot = False ):
         
         """
             FitData( self, type = 'Lorentzian', showPlot = True )
@@ -343,6 +346,7 @@ class RamanFitter:
 
         """
         print( "Fitting Model..." )
+
         # Fit exponential to remove background
         if len( self.peaks_y ) > 0:
 
@@ -354,10 +358,13 @@ class RamanFitter:
 
             Model_list  = []
 
-            #Cycle through each peak to fit a Lorentzian
-            for i in range( len( self.peaks_y ) ):
-                pref    = 'Curve_'+str(i+1)+'_'
+            # Cycle through each peak to fit the required type
+            i = 0
+            for key in center_bounds:
+                type = center_bounds[key][2]
 
+            # for i in range( len( self.peaks_y ) ):
+                pref    = 'Curve_'+str(i+1)+'_'
                 if type == 'Lorentzian':
                     Model_list.append( LorentzianModel( prefix = pref ) )
                 elif type == 'Gaussian':
@@ -373,6 +380,7 @@ class RamanFitter:
                 pars[ pref+'amplitude' ].set( value = self.y_old[ self.npeaks[ i ] ], min = self.y_old[ self.npeaks[ i ] ]*( 1. - self.perc_range ) )
 
                 mod     += Model_list[i]
+                i+=1
 
             out             = mod.fit( self.y_old, pars, x = self.x )         #out.best_fit = total of fit values
             self.fit_line   = out.best_fit

@@ -26,7 +26,8 @@ for i, row in bounds_df.iterrows():
     peak_index = row['Peak Index']
     center_min = row['Center Min']
     center_max = row['Center Max']
-    center_bounds[peak_index] = [center_min, center_max]
+    type       = row['Type']
+    center_bounds[peak_index] = [center_min, center_max, type]
 
 raman_fitter = RamanFitter(
         x            = raman_shift, # a 1D array of the x-axis values
@@ -58,7 +59,7 @@ raman_fitter.Denoise(
 # Find the peaks in the data
 raman_fitter.FindPeaks(
         txt_file_dictionary = txt_file_dictionary,  # a dictionary of (raman_shift: intensity pairs)
-        center_bounds       = center_bounds,        # a dict center_bounds[peak_index] = [center_min, center_max] for bounds to find peak
+        center_bounds       = center_bounds,        # a dict center_bounds[peak_index] = [center_min, center_max, type] for bounds to find peak
         DistBetweenPeaks    = 1,                    # minimum distance between peaks, in terms of data points
         showPlot            = True                  # this will show a plot of the found peaks
     )
@@ -66,8 +67,9 @@ raman_fitter.FindPeaks(
 
 # Fits the data with associated curve types
 raman_fitter.FitData(
-        type     = 'Voigt', # which type of curve to use for peak - options are 'Lorentzian', 'Gaussian', and 'Voigt'
-        showPlot = True     # this will show a plot of the fit data
+        # type          = 'Voigt',       # which type of curve to use for peak - options are 'Lorentzian', 'Gaussian', and 'Voigt'
+        center_bounds = center_bounds, # a dict center_bounds[peak_index] = [center_min, center_max, type] for bounds to find peak
+        showPlot      = True           # this will show a plot of the fit data
     )
 
 
