@@ -217,10 +217,10 @@ class RamanFitter:
         return list(dictionary.keys()).index(closest_key)+1
 
     # Find the peaks in the data
-    def FindPeaks( self, txt_file_dictionary, center_bounds, DistBetweenPeaks = 50, showPlot = False ):
+    def FindPeaks( self, txt_file_dictionary, centre_bounds, DistBetweenPeaks = 50, showPlot = False ):
 
         """
-            FindPeaks( self, center_bounds, DistBetweenPeaks = 50, showPlot = False )
+            FindPeaks( self, centre_bounds, DistBetweenPeaks = 50, showPlot = False )
 
             Finds peaks in the `self.y` numpy array given during the initialization of the class.
 
@@ -239,7 +239,7 @@ class RamanFitter:
         # self.peaks_x = []   # stores the x_values of peaks
         # self.npeaks = []    # stores the indices of the peaks found
 
-        # for x_value in center_bounds:
+        # for x_value in centre_bounds:
         #     self.peaks_x.append(x_value)
         #     closest_x_value_key = self.find_closest_key_index(txt_file_dictionary, x_value)
         #     self.npeaks.append(closest_x_value_key)
@@ -257,7 +257,7 @@ class RamanFitter:
 
 
         print( "Finding Peaks..." )
-        #Find Peaks
+        # Find Peaks
         peaks, _  = signal.find_peaks( self.y, distance = DistBetweenPeaks )
         
         # Filter peaks by x-axis bounds
@@ -274,24 +274,36 @@ class RamanFitter:
         filtered_peaks_x = []
         filtered_peaks_y = []
         filtered_npeaks = []
-        center_bounds_copy = dict(center_bounds) # it will later contain peak indices which the software was unable to fit
+        counter_of_peaks = {}
+        centre_bounds_copy = dict(centre_bounds) # it will later contain peak indices which the software was unable to fit
 
+        # loop through all the peaks software found
         for i in range(len(self.peaks_x)):
-            for key in center_bounds:
-                if (self.peaks_x[i] >= center_bounds[key][0]) and (self.peaks_x[i] <= center_bounds[key][1]):
-                    filtered_peaks_x.append(self.peaks_x[i])
-                    filtered_peaks_y.append(self.peaks_y[i])
-                    peak_index = list(self.x).index(self.peaks_x[i])
-                    filtered_npeaks.append(peak_index)
-                    del center_bounds_copy[key]
+            
+            # loop through the ranges / peak_indices guess the user provided
+            for peak in centre_bounds:
+                
+                # checking the state of counter of the region in counter_of_peaks dictionary
+                if (peak not in counter_of_peaks):
+                    counter_of_peaks[peak] = 0
+                
+                # condition for peak existence
+                if (self.peaks_x[i] >= centre_bounds[peak][0]) and (self.peaks_x[i] <= centre_bounds[peak][1]):
+                    
+                    # peak operation starts
+                    if (counter_of_peaks == 0):
+                        filtered_peaks_x.append(self.peaks_x[i])         # take the x-value of the peak
+                        filtered_peaks_y.append(self.peaks_y[i])         # take the y-value of the peak
+                        peak_index = list(self.x).index(self.peaks_x[i]) # finding the data point for the peak
+                        filtered_npeaks.append(peak_index)               # filling the data point in self.npeaks
+                        del centre_bounds_copy[peak]                     # only leaving the peaks in centre_bounds_copy which are yet to be found 
+                        counter_of_peaks[peak] += 1                      # increase the counter of peaks in that specific region by 1 (final) - it should not be more than 1 
 
-        peaks_x = []
-        for x_value in center_bounds_copy:
+        remaining_peaks_x = []
+        for x_value in centre_bounds_copy:
             filtered_peaks_x.append(x_value)
-            peaks_x.append(x_value)
+            remaining_peaks_x.append(x_value)
             closest_x_value = self.find_closest_key_index(txt_file_dictionary, x_value)
-            # y_value = ( closest_x_value - self.min_y ) * self.scale
-            # filtered_peaks_y.append(y_value)
             filtered_npeaks.append(closest_x_value)
         
         
@@ -302,9 +314,8 @@ class RamanFitter:
         # showing the plot
         if showPlot:
             plt.plot( self.x, self.y, color = 'c', label = 'Data' )                  # plot the curve
-            
             line = plt.gca().get_lines()[0]                                          # get the first Line2D object
-            peaks_y = line.get_ydata()[np.searchsorted(self.x, peaks_x)]   # get the y-values
+            peaks_y = line.get_ydata()[np.searchsorted(self.x, remaining_peaks_x)]   # get the y-values of remaining peaks which software did not find
             self.peaks_y.extend(peaks_y)
             
             plt.scatter( self.peaks_x, self.peaks_y, color = 'k', label = 'Peaks' )  # scatter the peaks
@@ -323,7 +334,7 @@ class RamanFitter:
     # Fit the Data to a Lorentzian, Gaussian, or Voigt model
     def FitData( self,
                 # type = 'Lorentzian',
-                center_bounds,
+                centre_bounds,
                 showPlot = False ):
         
         """
@@ -360,8 +371,9 @@ class RamanFitter:
 
             # Cycle through each peak to fit the required type
             i = 0
-            for key in center_bounds:
-                type = center_bounds[key][2]
+            MARGIN = 5
+            for key in centre_bounds:
+                type = centre_bounds[key][2]
 
             # for i in range( len( self.peaks_y ) ):
                 pref    = 'Curve_'+str(i+1)+'_'
@@ -375,19 +387,27 @@ class RamanFitter:
 
                 pars.update( Model_list[i].make_params() )
 
-                pars[ pref+'center' ].set(    value = self.x[ self.npeaks[ i ] ], min = self.x[ self.npeaks[ i ] ]*( 1. - self.perc_range ), max = self.x[ self.npeaks[ i ] ]*( 1. + self.perc_range ) )
-                pars[ pref+'sigma' ].set(     value = self.sigmas[ 0 ],           min = self.sigmas[ 1 ],                                    max = self.sigmas[ 2 ] )
-                pars[ pref+'amplitude' ].set( value = self.y_old[ self.npeaks[ i ] ], min = self.y_old[ self.npeaks[ i ] ]*( 1. - self.perc_range ) )
+                pars[ pref+'center' ].set(value = self.peaks_x[i],
+                                          min = self.peaks_x[i] - MARGIN, 
+                                          max = self.peaks_x[i] + MARGIN )
+                                        #   value = self.x[ self.npeaks[ i ] ],
+                                        #   min = self.x[ self.npeaks[ i ] ]*( 1. - self.perc_range ),
+                                        #   max = self.x[ self.npeaks[ i ] ]*( 1. + self.perc_range )
+                pars[ pref+'sigma' ].set(value = self.sigmas[ 0 ],
+                                         min = self.sigmas[ 1 ],
+                                         max = self.sigmas[ 2 ] )
+                pars[ pref+'amplitude' ].set(value = self.y_old[ self.npeaks[ i ] ],
+                                             min = self.y_old[ self.npeaks[ i ] ]*( 1. - self.perc_range ) )
 
                 mod     += Model_list[i]
                 i+=1
 
-            out             = mod.fit( self.y_old, pars, x = self.x )         #out.best_fit = total of fit values
+            out             = mod.fit( self.y_old, pars, x = self.x )         # out.best_fit = total of fit values
             self.fit_line   = out.best_fit
             self.params     = out.params
-            self.comps      = out.eval_components( x = self.x )         #comps[pref]  = specific lorentz curve from best_fit
-
-            #Build peaks list
+            self.comps      = out.eval_components( x = self.x )         # comps[pref]  = specific lorentz curve from best_fit
+        
+            # Build peaks list
             peaks_list = []
             for i in range( len( self.peaks_y ) ):
                 pref = "Curve_"+str(i+1)+"_"
@@ -490,7 +510,7 @@ if __name__ == "__main__":
 
     RF      = RamanFitter( x = x, y = y, autorun = True )                       # Call class
 
-    RF.NormalizeData()                                                          # Normalize data to 1 (Good for comparisons of other plots and machine learning)
-    RF.Denoise( ShowPlot = True )                                               # Remove noise from data
-    RF.FindPeaks( center_bounds, showPlot = True )                                             # Find the peaks in the cleaned data
-    RF.FitData( type = 'Lorentzian', showPlot = True )                          # Fit the original data utilizing the found peaks
+    RF.NormalizeData()                                                                           # Normalize data to 1 (Good for comparisons of other plots and machine learning)
+    RF.Denoise( ShowPlot = True )                                                                # Remove noise from data
+    RF.FindPeaks( txt_file_dictionary, centre_bounds, DistBetweenPeaks = 50, showPlot = False )  # Find the peaks in the cleaned data
+    RF.FitData( centre_bounds, showPlot = True )                                                # Fit the original data utilizing the found peaks
