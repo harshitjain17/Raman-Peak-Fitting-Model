@@ -14,6 +14,7 @@ __status__  = "planning"
 
 import os
 import numpy as np
+import pandas as pd
 from scipy import signal
 from lmfit.models import ExponentialModel, LorentzianModel, GaussianModel, VoigtModel
 import matplotlib.pyplot as plt
@@ -172,11 +173,11 @@ class RamanFitter:
         # If UseFFT, FFT filtering will be used
         if UseFFT:
             # Get points and dx
-            x_pnts      = len( self.x )                                                  # Number of points
-            self.Δx     = self.x[1] - self.x[0]                                               # Δx
+            x_pnts      = len( self.x )                                             # Number of points
+            self.Δx     = self.x[1] - self.x[0]                                     # Δx
 
 
-            fhat        =  np.fft.fft( self.y, x_pnts )                                  # Computes the fft
+            fhat        =  np.fft.fft( self.y, x_pnts )                             # Computes the fft
             psd         = fhat * np.conj( fhat )/x_pnts                             # Compute Power Spectrum
             L           = np.arange( 1, np.floor( x_pnts/2. ), dtype = np.int32 )   # Only look at real components
 
@@ -195,7 +196,14 @@ class RamanFitter:
         if ShowPlot:
             plt.plot( self.x, self.y_old, color = 'c', label = 'Noisy' )
             plt.plot( self.x, self.y/self.scale+self.min_y, color = 'k', label = 'Filtered' )
-            plt.xlim( self.x[0], self.x[-1] )
+            if len(self.peaks_x) > 0:
+                x_min = min(self.peaks_x) - 150                                      # defining the lower x-limit 
+                x_max = max(self.peaks_x) + 150                                      # defining the upper x-limit
+                if (self.x[-1] < x_max):                                             # handling out-of-bounds-error
+                    x_max = self.x[-1]
+                if (self.x[0] > x_min):                                              # handling out-of-bounds-error
+                    x_min = self.x[0]
+            plt.xlim(x_min, x_max)                                                   # set the x-axis limits
             plt.legend()
             plt.show()
 
@@ -204,12 +212,19 @@ class RamanFitter:
     def find_closest_key_index(self, dictionary, value):
         """
             Find the index of the closest key in the dictionary to the given number
+            
+            Parameters
+            ----------
+            dictionary : A dictionary object to search for the closest key.
+            value : A numerical value for which we want to find the closest key index.
+            
+            Returns:
+            The index of the closest key in the dictionary to the given number.
         """
         closest_key = None
         min_diff = None
         for i, key in enumerate(dictionary.keys()):
             diff = abs(value - key)
-            
             if min_diff is None or diff < min_diff:
                 min_diff = diff
                 closest_key = key
@@ -220,7 +235,7 @@ class RamanFitter:
     def FindPeaks( self, txt_file_dictionary, centre_bounds, DistBetweenPeaks = 50, showPlot = False ):
 
         """
-            FindPeaks( self, centre_bounds, DistBetweenPeaks = 50, showPlot = False )
+            FindPeaks( self, txt_file_dictionary, centre_bounds, DistBetweenPeaks = 50, showPlot = False )
 
             Finds peaks in the `self.y` numpy array given during the initialization of the class.
 
@@ -228,6 +243,8 @@ class RamanFitter:
 
             Parameters
             ----------
+            txt_file_dictionary : dictionary
+                Dictionary version of the raw data provided by the user
             DistBetweenPeaks : int, optional, default: 50
                 Minimum distance between peaks, in terms of data points
             ShowPlot : bool, optional, default: False
@@ -274,8 +291,8 @@ class RamanFitter:
         filtered_peaks_x = []
         filtered_peaks_y = []
         filtered_npeaks = []
-        counter_of_peaks = {}
-        centre_bounds_copy = dict(centre_bounds) # it will later contain peak indices which the software was unable to fit
+        counter_for_peaks = {}
+        remaining_centre_bounds = dict(centre_bounds) # it will later contain peak indices which the software was unable to fit
 
         # loop through all the peaks software found
         for i in range(len(self.peaks_x)):
@@ -284,27 +301,27 @@ class RamanFitter:
             for peak in centre_bounds:
                 
                 # checking the state of counter of the region in counter_of_peaks dictionary
-                if (peak not in counter_of_peaks):
-                    counter_of_peaks[peak] = 0
+                if (peak not in counter_for_peaks):
+                    counter_for_peaks[peak] = 0
                 
                 # condition for peak existence
                 if (self.peaks_x[i] >= centre_bounds[peak][0]) and (self.peaks_x[i] <= centre_bounds[peak][1]):
                     
                     # peak operation starts
-                    if (counter_of_peaks == 0):
+                    if (counter_for_peaks == 0):
                         filtered_peaks_x.append(self.peaks_x[i])         # take the x-value of the peak
                         filtered_peaks_y.append(self.peaks_y[i])         # take the y-value of the peak
                         peak_index = list(self.x).index(self.peaks_x[i]) # finding the data point for the peak
                         filtered_npeaks.append(peak_index)               # filling the data point in self.npeaks
-                        del centre_bounds_copy[peak]                     # only leaving the peaks in centre_bounds_copy which are yet to be found 
-                        counter_of_peaks[peak] += 1                      # increase the counter of peaks in that specific region by 1 (final) - it should not be more than 1 
+                        del remaining_centre_bounds[peak]                # only leaving the peaks in centre_bounds_copy which are yet to be found 
+                        counter_for_peaks[peak] += 1                     # increase the counter of peaks in that specific region by 1 (final) - it should not be more than 1 
 
-        remaining_peaks_x = []
-        for x_value in centre_bounds_copy:
-            filtered_peaks_x.append(x_value)
-            remaining_peaks_x.append(x_value)
-            closest_x_value = self.find_closest_key_index(txt_file_dictionary, x_value)
-            filtered_npeaks.append(closest_x_value)
+        remaining_peaks_x = []                                                          # Create an empty list to store remaining peaks x-values
+        for x_value in remaining_centre_bounds:                                         # Iterate through each x-value in the remaining_centre_bounds list
+            filtered_peaks_x.append(x_value)                                            # Append the remaining x-values to the filtered_peaks_x list - now your list of peaks is complete
+            remaining_peaks_x.append(x_value)                                           # Append the remaining x-values to the remaining_peaks_x list
+            closest_x_value = self.find_closest_key_index(txt_file_dictionary, x_value) # Find the closest key-index (data point) in the txt_file_dictionary to the current x-value
+            filtered_npeaks.append(closest_x_value)                                     # Append the closest key to the filtered_npeaks list
         
         
         self.npeaks = filtered_npeaks
@@ -316,20 +333,19 @@ class RamanFitter:
             plt.plot( self.x, self.y, color = 'c', label = 'Data' )                  # plot the curve
             line = plt.gca().get_lines()[0]                                          # get the first Line2D object
             peaks_y = line.get_ydata()[np.searchsorted(self.x, remaining_peaks_x)]   # get the y-values of remaining peaks which software did not find
-            self.peaks_y.extend(peaks_y)
-            
+            self.peaks_y.extend(peaks_y)                                             # adding the list of y-values of peaks founded by the user
             plt.scatter( self.peaks_x, self.peaks_y, color = 'k', label = 'Peaks' )  # scatter the peaks
-            plt.xlim( self.x[0], self.x[-1] )                                        # set the x-axis limits
+            if len(self.peaks_x) > 0:
+                x_min = min(self.peaks_x) - 200                                      # defining the lower x-limit 
+                x_max = max(self.peaks_x) + 200                                      # defining the upper x-limit
+                if (self.x[-1] < x_max):                                             # handling out-of-bounds-error
+                    x_max = self.x[-1]
+                if (self.x[0] > x_min):                                              # handling out-of-bounds-error
+                    x_min = self.x[0]
+            plt.xlim(x_min, x_max)                                                   # set the x-axis limits
             plt.legend()                                                             # set the legends for graph
             plt.show()                                                               # show the graph
         
-        
-        # if showPlot:
-        #     plt.plot( self.x, self.y, color = 'c', label = 'Data' )
-        #     plt.scatter( self.peaks_x, self.peaks_y, color = 'k', label = 'Peaks' )        
-        #     plt.xlim( self.x[0], self.x[-1] )
-        #     plt.legend()
-        #     plt.show()
 
     # Fit the Data to a Lorentzian, Gaussian, or Voigt model
     def FitData( self,
@@ -375,7 +391,6 @@ class RamanFitter:
             for key in centre_bounds:
                 type = centre_bounds[key][2]
 
-            # for i in range( len( self.peaks_y ) ):
                 pref    = 'Curve_'+str(i+1)+'_'
                 if type == 'Lorentzian':
                     Model_list.append( LorentzianModel( prefix = pref ) )
@@ -387,22 +402,22 @@ class RamanFitter:
 
                 pars.update( Model_list[i].make_params() )
 
-                pars[ pref+'center' ].set(value = self.peaks_x[i],
-                                          min = self.peaks_x[i] - MARGIN, 
-                                          max = self.peaks_x[i] + MARGIN )
+                pars[pref+'center'].set(value = self.peaks_x[i],
+                                        min = self.peaks_x[i] - MARGIN, 
+                                        max = self.peaks_x[i] + MARGIN )
                                         #   value = self.x[ self.npeaks[ i ] ],
                                         #   min = self.x[ self.npeaks[ i ] ]*( 1. - self.perc_range ),
                                         #   max = self.x[ self.npeaks[ i ] ]*( 1. + self.perc_range )
-                pars[ pref+'sigma' ].set(value = self.sigmas[ 0 ],
-                                         min = self.sigmas[ 1 ],
-                                         max = self.sigmas[ 2 ] )
-                pars[ pref+'amplitude' ].set(value = self.y_old[ self.npeaks[ i ] ],
-                                             min = self.y_old[ self.npeaks[ i ] ]*( 1. - self.perc_range ) )
+                pars[pref+'sigma'].set(value = self.sigmas[ 0 ],
+                                        min = self.sigmas[ 1 ],
+                                        max = self.sigmas[ 2 ] )
+                pars[pref+'amplitude'].set(value = self.y_old[self.npeaks[i]],
+                                            min = self.y_old[self.npeaks[i]]*( 1. - self.perc_range ) )
 
-                mod     += Model_list[i]
+                mod += Model_list[i]
                 i+=1
 
-            out             = mod.fit( self.y_old, pars, x = self.x )         # out.best_fit = total of fit values
+            out             = mod.fit( self.y_old, pars, x = self.x )   # out.best_fit = total of fit values
             self.fit_line   = out.best_fit
             self.params     = out.params
             self.comps      = out.eval_components( x = self.x )         # comps[pref]  = specific lorentz curve from best_fit
@@ -415,20 +430,41 @@ class RamanFitter:
 
             lst     = np.asarray( peaks_list )
 
+            # get the (x,y) values for each curve
+            data = {}
+            for key in self.comps.keys():
+                data[key] = self.comps[key]
+            data['x'] = self.x
+
+            # create a pandas DataFrame from the data
+            df = pd.DataFrame(data)
+
+            # save the DataFrame to an Excel file
+            df.to_excel('curves.xlsx', index=False)
+
             if showPlot:
 
                 plt.plot( self.x, self.y_old, label = "Original Data" )
                 plt.plot( self.x, self.fit_line, label = "Fit Model" )
-
-                # Add components
-                for i, l in enumerate( self.comps.items() ):
-                    plt.plot( self.x, l[1], label = f"Curve {i+1}", lw = 1, linestyle = 'dotted', color = 'xkcd:crimson' )
-
                 
+                colors = ['xkcd:crimson', 'xkcd:navy', 'xkcd:green', 'xkcd:purple', 'xkcd:orange', 'xkcd:teal', 'xkcd:pink', 'xkcd:brown', 'xkcd:blue', 'xkcd:grey']
+                for i, l in enumerate( self.comps.items() ):
+                    plt.plot( self.x, l[1], label = f"Curve {i+1}", lw = 1, linestyle = 'dotted', color = colors[i] )
+                    # if (i < len(self.peaks_x)):
+                    #     plt.text(self.peaks_x[i], self.peaks_y[i], f"Curve {i+1}")
+
                 plt.xlabel( 'cm^-1' )
                 plt.ylabel( 'Intensity' )
                 plt.grid(True)
                 plt.title( "Fit Model" )
+                if len(self.peaks_x) > 0:
+                    x_min = min(self.peaks_x) - 150                                      # defining the lower x-limit 
+                    x_max = max(self.peaks_x) + 150                                      # defining the upper x-limit
+                    if (self.x[-1] < x_max):                                             # handling out-of-bounds-error
+                        x_max = self.x[-1]
+                    if (self.x[0] > x_min):                                              # handling out-of-bounds-error
+                        x_min = self.x[0]
+                plt.xlim(x_min, x_max)                                                   # set the x-axis limits
                 plt.legend()
                 plt.show()
 
@@ -437,6 +473,14 @@ class RamanFitter:
                 plt.ylabel( 'Intensity' )
                 plt.grid(True)
                 plt.title( "Fit Model with background removed" )
+                if len(self.peaks_x) > 0:
+                    x_min = min(self.peaks_x) - 150                                      # defining the lower x-limit 
+                    x_max = max(self.peaks_x) + 150                                      # defining the upper x-limit
+                    if (self.x[-1] < x_max):                                             # handling out-of-bounds-error
+                        x_max = self.x[-1]
+                    if (self.x[0] > x_min):                                              # handling out-of-bounds-error
+                        x_min = self.x[0]
+                plt.xlim(x_min, x_max)                                                   # set the x-axis limits
                 plt.legend()
                 plt.show()
 
