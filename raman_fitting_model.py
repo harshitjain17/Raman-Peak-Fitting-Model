@@ -5,7 +5,7 @@ from ramanfitter import RamanFitter
 from ramanfitter.mapper import Mapper
 import matplotlib.pyplot as plt
 
-filename = os.path.join('GC_633nm.txt') # Get File
+filename = os.path.join('GC_532nm.txt') # Get File
 data = np.genfromtxt(filename) # Open File
 
 # Extract the Raman shift and intensity values
@@ -16,7 +16,7 @@ intensity   = data[:, 1] # Parse y-values - typically intensity or counts
 txt_file_dictionary = dict(zip(raman_shift, intensity))
 
 # Load the user input for the bounds of the center of the peak from an Excel file
-bounds_df = pd.read_excel('centre_bounds2.xlsx')
+bounds_df = pd.read_excel('centre_bounds_GC_532nm.xlsx')
 
 # Create a dictionary to store the bounds for each peak
 centre_bounds = {}
@@ -37,7 +37,7 @@ raman_fitter = RamanFitter(
         PercentRange = 0.11,        # determines what percent error the fit model can have in regards to the amplitude and position of fit curves under found peaks
         Sigma        = 15,          # the expected width of fit curves, in terms of data points
         SigmaMin     = 3,           # the expected minimum width allowed of fit curves, in terms of data points
-        SigmaMax     = 300          # the expected maximum width allowed of fit curves, in terms of data points
+        SigmaMax     = 50           # the expected maximum width allowed of fit curves, in terms of data points
     )
 
 
