@@ -108,7 +108,6 @@ class RamanFitter:
         if autorun:
             # Normalize the Data
             self.NormalizeData()
-
             # Denoise Data
             self.Denoise()
 
@@ -232,10 +231,10 @@ class RamanFitter:
         return list(dictionary.keys()).index(closest_key)+1
 
     # Find the peaks in the data
-    def FindPeaks( self, txt_file_dictionary, centre_bounds, DistBetweenPeaks = 50, showPlot = False ):
+    def FindPeaks( self, txt_file_dictionary, center_bounds, DistBetweenPeaks = 50, showPlot = False ):
 
         """
-            FindPeaks( self, txt_file_dictionary, centre_bounds, DistBetweenPeaks = 50, showPlot = False )
+            FindPeaks( self, txt_file_dictionary, center_bounds, DistBetweenPeaks = 50, showPlot = False )
 
             Finds peaks in the `self.y` numpy array given during the initialization of the class.
 
@@ -245,33 +244,14 @@ class RamanFitter:
             ----------
             txt_file_dictionary : dictionary
                 Dictionary version of the raw data provided by the user
+            center_bounds : dictionary
+                Dictionary version of peak_index, bounds, and type_of_curve (which type of curve to use for peaks. Options are 'Lorentzian', 'Gaussian', and 'Voigt')
             DistBetweenPeaks : int, optional, default: 50
                 Minimum distance between peaks, in terms of data points
             ShowPlot : bool, optional, default: False
                 If set to `True` this will show a plot of the found peaks
 
         """
-        # print( "Finding Peaks..." )
-
-        # self.peaks_x = []   # stores the x_values of peaks
-        # self.npeaks = []    # stores the indices of the peaks found
-
-        # for x_value in centre_bounds:
-        #     self.peaks_x.append(x_value)
-        #     closest_x_value_key = self.find_closest_key_index(txt_file_dictionary, x_value)
-        #     self.npeaks.append(closest_x_value_key)
-        # # self.peaks_y = [ self.y[i] for i in self.npeaks ]
-
-        # # showing the plot
-        # if showPlot:
-        #     plt.plot( self.x, self.y, color = 'c', label = 'Data' )                  # plot the curve
-        #     line = plt.gca().get_lines()[0]                                          # get the first Line2D object
-        #     self.peaks_y = line.get_ydata()[np.searchsorted(self.x, self.peaks_x)]   # get the y-values
-        #     plt.scatter( self.peaks_x, self.peaks_y, color = 'k', label = 'Peaks' )  # scatter the peaks
-        #     plt.xlim( self.x[0], self.x[-1] )                                        # set the x-axis limits
-        #     plt.legend()                                                             # set the legends for graph
-        #     plt.show()                                                               # show the graph
-
 
         print( "Finding Peaks..." )
         # Find Peaks
@@ -292,20 +272,22 @@ class RamanFitter:
         filtered_peaks_y = []
         filtered_npeaks = []
         counter_for_peaks = {}
-        remaining_centre_bounds = dict(centre_bounds) # it will later contain peak indices which the software was unable to fit
+
+        # it will later contain peak indices which the software was unable to fit
+        remaining_center_bounds = dict(center_bounds)
 
         # loop through all the peaks software found
         for i in range(len(self.peaks_x)):
             
             # loop through the ranges / peak_indices guess the user provided
-            for peak in centre_bounds:
+            for peak in center_bounds:
                 
                 # checking the state of counter of the region in counter_of_peaks dictionary
                 if (peak not in counter_for_peaks):
                     counter_for_peaks[peak] = 0
                 
                 # condition for peak existence
-                if (self.peaks_x[i] >= centre_bounds[peak][0]) and (self.peaks_x[i] <= centre_bounds[peak][1]):
+                if (self.peaks_x[i] >= center_bounds[peak][0]) and (self.peaks_x[i] <= center_bounds[peak][1]):
                     
                     # peak operation starts
                     if (counter_for_peaks == 0):
@@ -313,16 +295,15 @@ class RamanFitter:
                         filtered_peaks_y.append(self.peaks_y[i])         # take the y-value of the peak
                         peak_index = list(self.x).index(self.peaks_x[i]) # finding the data point for the peak
                         filtered_npeaks.append(peak_index)               # filling the data point in self.npeaks
-                        del remaining_centre_bounds[peak]                # only leaving the peaks in centre_bounds_copy which are yet to be found 
+                        del remaining_center_bounds[peak]                # only leaving the peaks in center_bounds_copy which are yet to be found 
                         counter_for_peaks[peak] += 1                     # increase the counter of peaks in that specific region by 1 (final) - it should not be more than 1 
 
         remaining_peaks_x = []                                                          # Create an empty list to store remaining peaks x-values
-        for x_value in remaining_centre_bounds:                                         # Iterate through each x-value in the remaining_centre_bounds list
+        for x_value in remaining_center_bounds:                                         # Iterate through each x-value in the remaining_center_bounds list
             filtered_peaks_x.append(x_value)                                            # Append the remaining x-values to the filtered_peaks_x list - now your list of peaks is complete
             remaining_peaks_x.append(x_value)                                           # Append the remaining x-values to the remaining_peaks_x list
             closest_x_value = self.find_closest_key_index(txt_file_dictionary, x_value) # Find the closest key-index (data point) in the txt_file_dictionary to the current x-value
             filtered_npeaks.append(closest_x_value)                                     # Append the closest key to the filtered_npeaks list
-        
         
         self.npeaks = filtered_npeaks
         self.peaks_x = filtered_peaks_x
@@ -348,10 +329,7 @@ class RamanFitter:
         
 
     # Fit the Data to a Lorentzian, Gaussian, or Voigt model
-    def FitData( self,
-                # type = 'Lorentzian',
-                centre_bounds,
-                showPlot = False ):
+    def FitData( self, center_bounds, showPlot = False ):
         
         """
             FitData( self, type = 'Lorentzian', showPlot = True )
@@ -366,8 +344,8 @@ class RamanFitter:
 
             Parameters
             ----------
-            type : str, optional, default: 'Lorentzian'
-                Which type of curve to use for peaks. Options are 'Lorentzian', 'Gaussian', and 'Voigt'
+            center_bounds : dictionary
+                Dictionary version of peak_index, bounds, and type_of_curve (which type of curve to use for peaks. Options are 'Lorentzian', 'Gaussian', and 'Voigt')
             ShowPlot : bool, optional, default: False
                 If set to `True` this will show a plot of the fit data
 
@@ -381,15 +359,16 @@ class RamanFitter:
 
             pars        = exp_mod.guess( self.y_old, x = self.x )
 
-            mod         = exp_mod
+            mod         = None
+            # mod         = exp_mod
 
             Model_list  = []
 
             # Cycle through each peak to fit the required type
             i = 0
             MARGIN = 5
-            for key in centre_bounds:
-                type = centre_bounds[key][2]
+            for key in center_bounds:
+                type = center_bounds[key][2]
 
                 pref    = 'Curve_'+str(i+1)+'_'
                 if type == 'Lorentzian':
@@ -413,8 +392,11 @@ class RamanFitter:
                                         max = self.sigmas[ 2 ] )
                 pars[pref+'amplitude'].set(value = self.y_old[self.npeaks[i]],
                                             min = self.y_old[self.npeaks[i]]*( 1. - self.perc_range ) )
-
-                mod += Model_list[i]
+                
+                if mod:
+                    mod += Model_list[i]
+                else:
+                    mod = Model_list[i]
                 i+=1
 
             out             = mod.fit( self.y_old, pars, x = self.x )   # out.best_fit = total of fit values
@@ -430,29 +412,17 @@ class RamanFitter:
 
             lst     = np.asarray( peaks_list )
 
-            # get the (x,y) values for each curve
-            data = {}
-            for key in self.comps.keys():
-                data[key] = self.comps[key]
-            data['x'] = self.x
-
-            # create a pandas DataFrame from the data
-            df = pd.DataFrame(data)
-
-            # save the DataFrame to an Excel file
-            df.to_excel('curves.xlsx', index=False)
-
             if showPlot:
 
                 plt.plot( self.x, self.y_old, label = "Original Data" )
                 plt.plot( self.x, self.fit_line, label = "Fit Model" )
                 
-                colors = ['xkcd:crimson', 'xkcd:navy', 'xkcd:green', 'xkcd:purple', 'xkcd:orange', 'xkcd:teal', 'xkcd:pink', 'xkcd:brown', 'xkcd:blue', 'xkcd:grey']
+                colors = ['xkcd:crimson', 'xkcd:navy', 'xkcd:green', 'xkcd:purple', 'xkcd:orange', 'xkcd:teal', 'xkcd:pink', 'xkcd:brown', 'xkcd:blue', 'xkcd:grey', 'xkcd:yellow', 'xkcd:black', 'xkcd:violet']
                 for i, l in enumerate( self.comps.items() ):
                     plt.plot( self.x, l[1], label = f"Curve {i+1}", lw = 1, linestyle = 'dotted', color = colors[i] )
                     # if (i < len(self.peaks_x)):
                     #     plt.text(self.peaks_x[i], self.peaks_y[i], f"Curve {i+1}")
-
+                        
                 plt.xlabel( 'cm^-1' )
                 plt.ylabel( 'Intensity' )
                 plt.grid(True)
@@ -468,7 +438,7 @@ class RamanFitter:
                 plt.legend()
                 plt.show()
 
-                plt.plot( self.x, self.fit_line-self.comps['exponential'], label = "Background Removed" )
+                plt.plot( self.x, self.fit_line, label = "Background Removed" )
                 plt.xlabel( 'cm^-1' )
                 plt.ylabel( 'Intensity' )
                 plt.grid(True)
@@ -556,5 +526,5 @@ if __name__ == "__main__":
 
     RF.NormalizeData()                                                                           # Normalize data to 1 (Good for comparisons of other plots and machine learning)
     RF.Denoise( ShowPlot = True )                                                                # Remove noise from data
-    RF.FindPeaks( txt_file_dictionary, centre_bounds, DistBetweenPeaks = 50, showPlot = False )  # Find the peaks in the cleaned data
-    RF.FitData( centre_bounds, showPlot = True )                                                # Fit the original data utilizing the found peaks
+    RF.FindPeaks( txt_file_dictionary, center_bounds, DistBetweenPeaks = 50, showPlot = False )  # Find the peaks in the cleaned data
+    RF.FitData( center_bounds, showPlot = True )                                                # Fit the original data utilizing the found peaks

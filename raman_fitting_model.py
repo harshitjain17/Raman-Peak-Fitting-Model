@@ -5,21 +5,23 @@ from ramanfitter import RamanFitter
 from ramanfitter.mapper import Mapper
 import matplotlib.pyplot as plt
 
-filename = os.path.join('GC_532nm.txt') # Get File
-data = np.genfromtxt(filename) # Open File
+filename = 'GC_532nm'
+file = os.path.join('results', filename, f'{filename}.txt') # Get File
+curves_data = np.genfromtxt(file) # Open File
 
 # Extract the Raman shift and intensity values
-raman_shift = data[:, 0] # Parse x-values - typically cm^-1 or nm values
-intensity   = data[:, 1] # Parse y-values - typically intensity or counts
+raman_shift = curves_data[:, 0] # Parse x-values - typically cm^-1 or nm values
+intensity   = curves_data[:, 1] # Parse y-values - typically intensity or counts
 
 # using zip() to create a dictionary of (raman_shift: intensity pairs)
 txt_file_dictionary = dict(zip(raman_shift, intensity))
 
 # Load the user input for the bounds of the center of the peak from an Excel file
-bounds_df = pd.read_excel('centre_bounds_GC_532nm.xlsx')
+center_bounds_path = f'results/{filename}/center_bounds_{filename}.xlsx'
+bounds_df = pd.read_excel(center_bounds_path)
 
 # Create a dictionary to store the bounds for each peak
-centre_bounds = {}
+center_bounds = {}
 
 # Loop through the rows of the input file and extract the bounds for each peak
 for i, row in bounds_df.iterrows():
@@ -27,7 +29,7 @@ for i, row in bounds_df.iterrows():
     center_min = row['Center Min']
     center_max = row['Center Max']
     type       = row['Type']
-    centre_bounds[peak_index] = [center_min, center_max, type]
+    center_bounds[peak_index] = [center_min, center_max, type]
 
 raman_fitter = RamanFitter(
         x            = raman_shift, # a 1D array of the x-axis values
@@ -59,7 +61,7 @@ raman_fitter.NormalizeData()
 # Find the peaks in the data
 raman_fitter.FindPeaks(
         txt_file_dictionary = txt_file_dictionary,  # a dictionary of (raman_shift: intensity pairs)
-        centre_bounds       = centre_bounds,        # a dict centre_bounds[peak_index] = [center_min, center_max, type] for bounds to find peak
+        center_bounds       = center_bounds,        # a dict center_bounds[peak_index] = [center_min, center_max, type] for bounds to find peak
         DistBetweenPeaks    = 1,                    # minimum distance between peaks, in terms of data points
         showPlot            = True                  # this will show a plot of the found peaks
     )
@@ -67,8 +69,7 @@ raman_fitter.FindPeaks(
 
 # Fits the data with associated curve types
 raman_fitter.FitData(
-        # type          = 'Voigt',       # which type of curve to use for peak - options are 'Lorentzian', 'Gaussian', and 'Voigt'
-        centre_bounds = centre_bounds, # a dict centre_bounds[peak_index] = [center_min, center_max, type] for bounds to find peak
+        center_bounds = center_bounds, # a dict center_bounds[peak_index] = [center_min, center_max, type] for bounds to find peak
         showPlot      = True           # this will show a plot of the fit data
     )
 
@@ -78,43 +79,18 @@ curveParams = raman_fitter.params     # Returns a dictionary of the parameters o
 bestFitLine = raman_fitter.fit_line   # Returns the plot data of the model
 
 
-'''
-This will create an .xlsx file named fitted_data.xlsx in the current working directory with three columns:
-Raman Shift, Intensity, and Best Fit Line.
-'''
-# Create a DataFrame from the data
-df = pd.DataFrame({'Raman Shift': raman_shift, 'Intensity': intensity, 'Best Fit Line': bestFitLine, 'Residual': (bestFitLine - intensity)})
 
-# Export the DataFrame to an .xlsx file
-df.to_excel('fitted_data.xlsx', index=False)
+'''--------------------------------------Results--------------------------------------'''
+# DataFrame for fitted_data from the data
+df_fitted_data = pd.DataFrame({'Raman Shift': raman_shift, 'Intensity': intensity, 'Best Fit Line': bestFitLine, 'Residual': (bestFitLine - intensity)})
+df_fitted_data.to_excel(f'results/{filename}/fitted_data_{filename}.xlsx', index=False)
 
+# get the (x,y) values for each curve
+curves_data = {}
+for key in components.keys():
+    curves_data[key] = components[key]
+curves_data['x'] = raman_shift
 
-
-
-'''
-ABOUT THRESHOLD:
-
-The threshold parameter is used to specify the minimum intensity threshold that a Raman peak must meet in order to be
-detected and fitted.
-
-When fitting Raman spectra, it is often necessary to set a threshold to filter out noise or unwanted signals that may be
-present in the data. The threshold parameter allows you to specify a minimum intensity value that a peak must have in order
-to be considered significant enough to be fitted.
-
-Any peaks in the Raman spectrum that do not meet this threshold will be ignored and not included in the final fit.
-Setting an appropriate threshold can help to improve the accuracy and reliability of Raman peak fitting by filtering out
-low-intensity or noise-related peaks that may not be relevant to the sample being analyzed.
-
-The threshold parameter is typically specified as a numerical value, representing the minimum intensity threshold required
-for peak detection and fitting. The specific value used may depend on the characteristics of the Raman spectrum and the
-specific analysis being performed.
-
-
-ABOUT GAMMA:
-
-The gamma parameter in the RamanFitter library in Python is a parameter that is used to model the linewidth of a Raman peak.
-The gamma parameter is typically used in conjunction with other parameters, such as the peak position, intensity, and shape,
-to model the Raman spectrum of a sample. The gamma parameter determines the width of the Raman peak in the fitted spectrum,
-with larger values of gamma resulting in broader peaks. The gamma parameter can be set manually in the RamanFitter library or
-can be automatically determined by the fitting algorithm.
-'''
+# DataFrame for curves_data from the data
+df_curves_data = pd.DataFrame(curves_data)
+df_curves_data.to_excel(f'results/{filename}/curves_data_{filename}.xlsx', index=False)
