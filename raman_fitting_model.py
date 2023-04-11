@@ -43,8 +43,6 @@ raman_fitter = RamanFitter(
     )
 
 
-''' Each step ran when autorun = False '''
-
 # Normalizes `y` data to 1
 raman_fitter.NormalizeData()
 
@@ -69,8 +67,9 @@ raman_fitter.FindPeaks(
 
 # Fits the data with associated curve types
 raman_fitter.FitData(
-        center_bounds = center_bounds, # a dict center_bounds[peak_index] = [center_min, center_max, type] for bounds to find peak
-        showPlot      = True           # this will show a plot of the fit data
+        txt_file_dictionary = txt_file_dictionary,  # a dictionary of (raman_shift: intensity pairs)
+        center_bounds = center_bounds,              # a dict center_bounds[peak_index] = [center_min, center_max, type] for bounds to find peak
+        showPlot      = True                        # this will show a plot of the fit data
     )
 
 

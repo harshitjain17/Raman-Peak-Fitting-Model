@@ -227,7 +227,6 @@ class RamanFitter:
             if min_diff is None or diff < min_diff:
                 min_diff = diff
                 closest_key = key
-
         return list(dictionary.keys()).index(closest_key)+1
 
     # Find the peaks in the data
@@ -302,8 +301,8 @@ class RamanFitter:
         for x_value in remaining_center_bounds:                                         # Iterate through each x-value in the remaining_center_bounds list
             filtered_peaks_x.append(x_value)                                            # Append the remaining x-values to the filtered_peaks_x list - now your list of peaks is complete
             remaining_peaks_x.append(x_value)                                           # Append the remaining x-values to the remaining_peaks_x list
-            closest_x_value = self.find_closest_key_index(txt_file_dictionary, x_value) # Find the closest key-index (data point) in the txt_file_dictionary to the current x-value
-            filtered_npeaks.append(closest_x_value)                                     # Append the closest key to the filtered_npeaks list
+            closest_x_index = self.find_closest_key_index(txt_file_dictionary, x_value) # Find the closest key-index (data point) in the txt_file_dictionary to the current x-value
+            filtered_npeaks.append(closest_x_index)                                     # Append the closest key to the filtered_npeaks list
         
         self.npeaks = filtered_npeaks
         self.peaks_x = filtered_peaks_x
@@ -316,7 +315,7 @@ class RamanFitter:
             peaks_y = line.get_ydata()[np.searchsorted(self.x, remaining_peaks_x)]   # get the y-values of remaining peaks which software did not find
             self.peaks_y.extend(peaks_y)                                             # adding the list of y-values of peaks founded by the user
             plt.scatter( self.peaks_x, self.peaks_y, color = 'k', label = 'Peaks' )  # scatter the peaks
-            if len(self.peaks_x) > 0:
+            if (len(self.peaks_x) > 0):
                 x_min = min(self.peaks_x) - 200                                      # defining the lower x-limit 
                 x_max = max(self.peaks_x) + 200                                      # defining the upper x-limit
                 if (self.x[-1] < x_max):                                             # handling out-of-bounds-error
@@ -329,7 +328,7 @@ class RamanFitter:
         
 
     # Fit the Data to a Lorentzian, Gaussian, or Voigt model
-    def FitData( self, center_bounds, showPlot = False ):
+    def FitData( self, txt_file_dictionary, center_bounds, showPlot = False ):
         
         """
             FitData( self, type = 'Lorentzian', showPlot = True )
@@ -344,6 +343,8 @@ class RamanFitter:
 
             Parameters
             ----------
+            txt_file_dictionary : dictionary
+                Dictionary version of the raw data provided by the user
             center_bounds : dictionary
                 Dictionary version of peak_index, bounds, and type_of_curve (which type of curve to use for peaks. Options are 'Lorentzian', 'Gaussian', and 'Voigt')
             ShowPlot : bool, optional, default: False
@@ -356,12 +357,8 @@ class RamanFitter:
         if len( self.peaks_y ) > 0:
 
             exp_mod     = ExponentialModel()
-
             pars        = exp_mod.guess( self.y_old, x = self.x )
-
             mod         = None
-            # mod         = exp_mod
-
             Model_list  = []
 
             # Cycle through each peak to fit the required type
@@ -370,33 +367,20 @@ class RamanFitter:
             for key in center_bounds:
                 type = center_bounds[key][2]
 
-                pref    = 'Curve_'+str(i+1)+'_'
-                if type == 'Lorentzian':
+                pref = 'Curve_'+str(i+1)+'_'
+                if (type == 'Lorentzian'):
                     Model_list.append( LorentzianModel( prefix = pref ) )
-                elif type == 'Gaussian':
+                elif (type == 'Gaussian'):
                     Model_list.append( GaussianModel( prefix = pref ) )
-                else:
+                elif (type == 'Voigt'):
                     Model_list.append( VoigtModel( prefix = pref ) )
 
-
                 pars.update( Model_list[i].make_params() )
-
-                pars[pref+'center'].set(value = self.peaks_x[i],
-                                        min = self.peaks_x[i] - MARGIN, 
-                                        max = self.peaks_x[i] + MARGIN )
-                                        #   value = self.x[ self.npeaks[ i ] ],
-                                        #   min = self.x[ self.npeaks[ i ] ]*( 1. - self.perc_range ),
-                                        #   max = self.x[ self.npeaks[ i ] ]*( 1. + self.perc_range )
-                pars[pref+'sigma'].set(value = self.sigmas[ 0 ],
-                                        min = self.sigmas[ 1 ],
-                                        max = self.sigmas[ 2 ] )
-                pars[pref+'amplitude'].set(value = self.y_old[self.npeaks[i]],
-                                            min = self.y_old[self.npeaks[i]]*( 1. - self.perc_range ) )
+                pars[pref+'center'].set(value = (self.peaks_x[i]), min = (self.peaks_x[i] - MARGIN),  max = (self.peaks_x[i] + MARGIN))
+                pars[pref+'sigma'].set(value = (self.sigmas[0]), min = (self.sigmas[1]), max = (self.sigmas[2]))
+                pars[pref+'amplitude'].set(value = (self.y_old[self.npeaks[i]]), min = (self.y_old[self.npeaks[i]]*(1. - self.perc_range)))
                 
-                if mod:
-                    mod += Model_list[i]
-                else:
-                    mod = Model_list[i]
+                mod = (mod + Model_list[i]) if mod else (Model_list[i])
                 i+=1
 
             out             = mod.fit( self.y_old, pars, x = self.x )   # out.best_fit = total of fit values
@@ -404,22 +388,35 @@ class RamanFitter:
             self.params     = out.params
             self.comps      = out.eval_components( x = self.x )         # comps[pref]  = specific lorentz curve from best_fit
         
-            # Build peaks list
-            peaks_list = []
-            for i in range( len( self.peaks_y ) ):
-                pref = "Curve_"+str(i+1)+"_"
-                peaks_list.append( self.params[pref+"center"] )
+            for j in range(len(self.peaks_x)):
 
-            lst     = np.asarray( peaks_list )
+                if (1300 <= self.peaks_x[j] <= 1400):
+                    d_peak_lower_index = self.find_closest_key_index(txt_file_dictionary, 1330)
+                    d_peak_upper_index = self.find_closest_key_index(txt_file_dictionary, 1370)
+                    d_peak_x = self.x[d_peak_lower_index : d_peak_upper_index]
+                    d_peak_y = self.y_old[d_peak_lower_index : d_peak_upper_index]
+
+                if (1540 <= self.peaks_x[j] <= 1620):
+                    g_peak_lower_index = self.find_closest_key_index(txt_file_dictionary, 1570)
+                    g_peak_upper_index = self.find_closest_key_index(txt_file_dictionary, 1620)
+                    g_peak_x = self.x[g_peak_lower_index : g_peak_upper_index]
+                    g_peak_y = self.y_old[g_peak_lower_index : g_peak_upper_index]
+                
+            remaining_x_index = self.find_closest_key_index(txt_file_dictionary, 1623)
+            remaining_x = self.x[remaining_x_index : ]
+            remaining_y = self.y_old[remaining_x_index : ]
 
             if showPlot:
 
-                plt.plot( self.x, self.y_old, label = "Original Data" )
-                plt.plot( self.x, self.fit_line, label = "Fit Model" )
+                plt.plot( d_peak_x, d_peak_y, label = "D Peak", color = 'black', linewidth = 2 )
+                plt.plot( g_peak_x, g_peak_y, label = "G Peak", color = 'black', linewidth = 2 )
+                plt.plot( remaining_x, remaining_y, label = "Original Data" )
+                plt.plot( self.x, self.fit_line, label = "Fit Model", linewidth = 1 )
                 
-                colors = ['xkcd:crimson', 'xkcd:navy', 'xkcd:green', 'xkcd:purple', 'xkcd:orange', 'xkcd:teal', 'xkcd:pink', 'xkcd:brown', 'xkcd:blue', 'xkcd:grey', 'xkcd:yellow', 'xkcd:black', 'xkcd:violet']
+                # colors = ['xkcd:crimson', 'xkcd:navy', 'xkcd:green', 'xkcd:purple', 'xkcd:orange', 'xkcd:teal', 'xkcd:pink', 'xkcd:brown', 'xkcd:blue', 'xkcd:grey', 'xkcd:yellow', 'xkcd:black', 'xkcd:violet']
                 for i, l in enumerate( self.comps.items() ):
-                    plt.plot( self.x, l[1], label = f"Curve {i+1}", lw = 1, linestyle = 'dotted', color = colors[i] )
+                    plt.plot( self.x, l[1], label = f"Curve {i+1}", lw = 1, linestyle = 'dotted' )
+                            #  color = colors[i] )
                     # if (i < len(self.peaks_x)):
                     #     plt.text(self.peaks_x[i], self.peaks_y[i], f"Curve {i+1}")
                         
