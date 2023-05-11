@@ -19,7 +19,7 @@ from scipy import signal
 from lmfit.models import ExponentialModel, LorentzianModel, GaussianModel, VoigtModel
 import matplotlib.pyplot as plt
 
-class RamanFitter:
+class RamanFitter_stage_2:
 
     """
     A class that fits Raman data with Lorentzian, Gaussian, or Voigt curves
@@ -109,11 +109,12 @@ class RamanFitter:
         self.scale               = 1.
         self.txt_file_dictionary = txt_file_dictionary
         self.filename            = filename
+        self.g_peak              = None
         
         # updating center_bounds dictionary to include ONLY D-Peaks and G-Peaks
         center_bounds_d_g_peaks = {}
         for peak_index in center_bounds:
-            if (1330 <= peak_index <= 1370) or (1570 <= peak_index <= 1620):
+            if (1330 <= peak_index <= 1370) or (1550 <= peak_index <= 1610):
                 center_bounds_d_g_peaks[peak_index] = center_bounds[peak_index]
         
         # finding D-Peak's x-values and y-values
@@ -123,8 +124,8 @@ class RamanFitter:
         d_peak_y = list(y)[d_peak_lower_index : d_peak_upper_index]
         
         # finding G-Peak's x-values and y-values
-        g_peak_lower_index = self.find_closest_key_index(self.txt_file_dictionary, 1570)
-        g_peak_upper_index = self.find_closest_key_index(self.txt_file_dictionary, 1620)
+        g_peak_lower_index = self.find_closest_key_index(self.txt_file_dictionary, 1550)
+        g_peak_upper_index = self.find_closest_key_index(self.txt_file_dictionary, 1610)
         g_peak_x = list(x)[g_peak_lower_index : g_peak_upper_index]
         g_peak_y = list(y)[g_peak_lower_index : g_peak_upper_index]
         
@@ -137,8 +138,10 @@ class RamanFitter:
         self.center_bounds       = center_bounds_d_g_peaks
 
         if autorun:
+
             # Normalize the Data
             self.NormalizeData()
+
             # Denoise Data
             self.Denoise()
 
@@ -147,7 +150,7 @@ class RamanFitter:
 
             # Fit Data
             self.FitData()
-
+    
     # Normalize the data to 1
     def NormalizeData( self ):
         """
@@ -159,10 +162,42 @@ class RamanFitter:
         self.min_y      = np.min( self.y )
         self.max_y      = np.max( self.y )
         self.scale      = 1./( self.max_y - self.min_y )
-
         self.y          = ( self.y - self.min_y )*self.scale
-
         self.threshold  *= self.scale
+
+    def get_raman_shift_x_values(self):
+        
+        """
+            Get the new x-values after cropping the raw data and defining D and G_peaks.
+
+            Parameters
+            ----------
+            None
+
+            Returns
+            -------
+            array
+                The array of x-values of the cropped raw data.
+
+        """
+        return self.x
+
+    def get_intensity_y_values(self):
+        
+        """
+            Get the new y-values after cropping the raw data and defining D and G_peaks.
+
+            Parameters
+            ----------
+            None
+
+            Returns
+            -------
+            array
+                The array of y-values of the cropped raw data.
+
+        """
+        return self.y
 
     # Denoise the data
     def Denoise( self,
@@ -293,6 +328,49 @@ class RamanFitter:
         self.peaks_y = np.array( [ self.y[i] for i in self.npeaks ] )
         self.peaks_x = np.array( [ self.x[i] for i in self.npeaks ] )
 
+        self.filtered_peaks_x = []
+        self.filtered_peaks_y = []
+        self.filtered_npeaks = []
+
+        counter_for_peaks = {'D-Peak' : 0, 'G-Peak' : 0} # (type_of_peak(D/G) : number_of_peaks_in_that_region) pairs
+
+        # loop through all the peaks software found
+        for i in range(len(self.peaks_x)):
+            
+            # condition for D-peak existence
+            if (1300 <= self.peaks_x[i] <= 1400):
+                
+                # peak operation starts
+                if (counter_for_peaks['D-Peak'] == 0):
+                    
+                    self.filtered_peaks_x.append(self.peaks_x[i])    # take the x-value of the peak
+                    self.filtered_peaks_y.append(self.peaks_y[i])    # take the y-value of the peak
+                    peak_index = list(self.x).index(self.peaks_x[i]) # finding the data point for the peak
+                    self.filtered_npeaks.append(peak_index)          # filling the data point in self.npeaks
+                    counter_for_peaks['D-Peak'] += 1                 # increase the counter of peaks in that specific region by 1 (final) - it should not be more than 1
+
+            # condition for G-peak existence
+            if (1540 <= self.peaks_x[i] <= 1620):
+                
+                # peak operation starts
+                if (counter_for_peaks['G-Peak'] == 0):
+                    self.filtered_peaks_x.append(self.peaks_x[i])    # take the x-value of the peak
+                    self.filtered_peaks_y.append(self.peaks_y[i])    # take the y-value of the peak
+                    peak_index = list(self.x).index(self.peaks_x[i]) # finding the data point for the peak
+                    self.filtered_npeaks.append(peak_index)          # filling the data point in self.npeaks
+                    counter_for_peaks['G-Peak'] += 1                 # increase the counter of peaks in that specific region by 1 (final) - it should not be more than 1
+
+        self.npeaks = self.filtered_npeaks
+        self.peaks_x = self.filtered_peaks_x
+        self.peaks_y = self.filtered_peaks_y
+        
+        # setting the G-Peak
+        try:
+            self.set_g_peak(self.peaks_x[1])
+        except:
+            print("G-Peak not found!")
+
+        # fetching the data point for plotting of raw data
         for i in range(len(self.x)):
             if (self.x[i] > 1400):
                 data_point = i
@@ -312,6 +390,7 @@ class RamanFitter:
                     x_min = self.x[0]
             plt.xlim(x_min, x_max)                                                                  # set the x-axis limits
             plt.legend()                                                                            # set the legends for graph
+            plt.gcf().suptitle(f'Peaks of {self.filename} - Stage 2')                               # set the title of the figure
             plt.show()                                                                              # show the graph
         
 
@@ -401,6 +480,7 @@ class RamanFitter:
                         x_min = self.x[0]
                 plt.xlim(x_min, x_max)                                                   # set the x-axis limits
                 plt.legend()
+                plt.gcf().suptitle(f'Curves of {self.filename} - Stage 2')               # set the title of the figure
                 plt.show()
 
                 plt.plot( self.x, self.fit_line, label = "Background Removed" )
@@ -422,6 +502,42 @@ class RamanFitter:
         # Fit curves at peaks
         else:
             print( "No peaks found!" )
+
+    # Setter of G-Peak
+    def set_g_peak(self, x_value):
+        
+        """
+            Set the x-value of the G peak.
+
+            Parameters
+            ----------
+            x_value : float
+                The x-value of the G peak to set.
+
+            Returns
+            -------
+            None
+
+        """
+        self.g_peak = x_value
+    
+    # Getter of G-Peak
+    def get_g_peak(self):
+        
+        """
+            Get the x-value of the G peak.
+
+            Parameters
+            ----------
+            None
+
+            Returns
+            -------
+            float
+                The x-value of the G peak.
+
+        """
+        return self.g_peak
 
     # Returns component of fit peak curves
     def get( self, index ):
@@ -487,7 +603,7 @@ if __name__ == "__main__":
         x = x[::-1]
         y = y[::-1]
 
-    RF      = RamanFitter( x = x, y = y, autorun = True )                       # Call class
+    RF      = RamanFitter_stage_2( x = x, y = y, autorun = True )                       # Call class
 
     RF.NormalizeData()                                                                                 # Normalize data to 1 (Good for comparisons of other plots and machine learning)
     RF.Denoise( ShowPlot = True )                                                                      # Remove noise from data

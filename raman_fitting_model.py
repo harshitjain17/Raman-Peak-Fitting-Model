@@ -1,52 +1,76 @@
 import os
 import numpy as np
 import pandas as pd
-# from ramanfitter import RamanFitter
-from ramanfitter_stage1 import RamanFitter
+from ramanfitter_stage2 import RamanFitter_stage_2
+from ramanfitter_stage1 import RamanFitter_stage_1
 
-filename = 'GC_532nm'
-file = os.path.join('results', filename, f'{filename}.txt') # Get File
-curves_data = np.genfromtxt(file)                           # Open File
+# Filename of the spectral file 1
+filename_spectral_1 = 'GC_532nm'
 
-# Extract the Raman shift and intensity values
-raman_shift = curves_data[:, 0] # Parse x-values - typically cm^-1 or nm values
-intensity   = curves_data[:, 1] # Parse y-values - typically intensity or counts
+# Parse the .txt file of spectral file 1
+file_spectral_1 = os.path.join('results', filename_spectral_1, f'{filename_spectral_1}.txt') # Get File
+curves_data_spectral_1 = np.genfromtxt(file_spectral_1)                                      # Open File
 
-# using zip() to create a dictionary of (raman_shift: intensity pairs)
-txt_file_dictionary = dict(zip(raman_shift, intensity))
+# Extract the Raman shift and intensity values of spectral file 1
+raman_shift_spectral_1 = curves_data_spectral_1[:, 0] # Parse x-values - typically cm^-1 or nm values
+intensity_spectral_1   = curves_data_spectral_1[:, 1] # Parse y-values - typically intensity or counts
 
-# Load the user input for the bounds of the center of the peak from an Excel file
-center_bounds_path = f'results/{filename}/center_bounds_{filename}.xlsx'
-bounds_df = pd.read_excel(center_bounds_path)
+# Using zip() to create a dictionary of (raman_shift: intensity pairs) of spectral file 1
+txt_file_dictionary_spectral_1 = dict(zip(raman_shift_spectral_1, intensity_spectral_1))
 
-# Create a dictionary to store the bounds for each peak
-center_bounds = {}
+# Load the user input for the bounds of the center of the peak from an Excel file of spectral file 1
+center_bounds_path_spectral_1 = f'results/{filename_spectral_1}/center_bounds_{filename_spectral_1}.xlsx'
+bounds_df_spectral_1 = pd.read_excel(center_bounds_path_spectral_1)
 
-# Loop through the rows of the input file and extract the bounds for each peak
-for i, row in bounds_df.iterrows():
+# Create a dictionary to store the bounds for each peak of spectral file 1
+center_bounds_spectral_1 = {}
+
+# Loop through the rows of the input file and extract the bounds for each peak of spectral file 1
+for i, row in bounds_df_spectral_1.iterrows():
     peak_index = row['Peak Index']
     center_min = row['Center Min']
     center_max = row['Center Max']
     type       = row['Type']
-    center_bounds[peak_index] = [center_min, center_max, type]
+    center_bounds_spectral_1[peak_index] = [center_min, center_max, type]
 
-raman_fitter = RamanFitter(
-        x                   = raman_shift,        # a 1D array of the x-axis values
-        y                   = intensity,          # a 1D array of the y-axis values
-        autorun             = False,              # attempt to calculate all steps and fit a model
-        threshold           = 12,                 # helps the code determine what is a worthy peak and what isn't
-        PercentRange        = 0.11,               # determines what percent error the fit model can have in regards to the amplitude and position of fit curves under found peaks
-        Sigma               = 15,                 # the expected width of fit curves, in terms of data points
-        SigmaMin            = 3,                  # the expected minimum width allowed of fit curves, in terms of data points
-        SigmaMax            = 50,                 # the expected maximum width allowed of fit curves, in terms of data points
-        txt_file_dictionary = txt_file_dictionary,# a dictionary of (raman_shift: intensity pairs)
-        center_bounds       = center_bounds,      # a dictionary version of peak_index, bounds, and type_of_curve (which type of curve to use for peaks. Options are 'Lorentzian', 'Gaussian', and 'Voigt')
-        filename            = filename            # name of the current file being examined
+# handling the spectral file 2, if exists
+try:
+    filename_spectral_2 = 'GC_633nm'
+    file_spectral_2 = os.path.join('results', filename_spectral_2, f'{filename_spectral_2}.txt')
+    curves_data_spectral_2 = np.genfromtxt(file_spectral_2)
+    raman_shift_spectral_2 = curves_data_spectral_2[:, 0] 
+    intensity_spectral_2   = curves_data_spectral_2[:, 1] 
+    txt_file_dictionary_spectral_2 = dict(zip(raman_shift_spectral_2, intensity_spectral_2))
+    center_bounds_path_spectral_2 = f'results/{filename_spectral_2}/center_bounds_{filename_spectral_2}.xlsx'
+    bounds_df_spectral_2 = pd.read_excel(center_bounds_path_spectral_2)
+    center_bounds_spectral_2 = {}
+    for i, row in bounds_df_spectral_2.iterrows():
+        peak_index = row['Peak Index']
+        center_min = row['Center Min']
+        center_max = row['Center Max']
+        type       = row['Type']
+        center_bounds_spectral_2[peak_index] = [center_min, center_max, type]
+except:
+    print("2nd spectral file not found!")
+
+# Run Stage 2 code on Spectral 1 
+raman_fitter_spectral_1 = RamanFitter_stage_2(
+        x                   = raman_shift_spectral_1,        # a 1D array of the x-axis values
+        y                   = intensity_spectral_1,          # a 1D array of the y-axis values
+        autorun             = False,                         # attempt to calculate all steps and fit a model
+        threshold           = 12,                            # helps the code determine what is a worthy peak and what isn't
+        PercentRange        = 0.11,                          # determines what percent error the fit model can have in regards to the amplitude and position of fit curves under found peaks
+        Sigma               = 15,                            # the expected width of fit curves, in terms of data points
+        SigmaMin            = 3,                             # the expected minimum width allowed of fit curves, in terms of data points
+        SigmaMax            = 50,                            # the expected maximum width allowed of fit curves, in terms of data points
+        txt_file_dictionary = txt_file_dictionary_spectral_1,# a dictionary of (raman_shift: intensity pairs)
+        center_bounds       = center_bounds_spectral_1,      # a dictionary version of peak_index, bounds, and type_of_curve (which type of curve to use for peaks. Options are 'Lorentzian', 'Gaussian', and 'Voigt')
+        filename            = filename_spectral_1            # name of the current file being examined
 )
 
 
 # Normalizes `y` data to 1
-raman_fitter.NormalizeData()
+raman_fitter_spectral_1.NormalizeData()
 
 # # Removes noise from input data
 # raman_fitter.Denoise(
@@ -59,33 +83,148 @@ raman_fitter.NormalizeData()
 #     )
 
 # Find the peaks in the data
-raman_fitter.FindPeaks(
+raman_fitter_spectral_1.FindPeaks(
         DistBetweenPeaks    = 1,                    # minimum distance between peaks, in terms of data points
         showPlot            = True                  # this will show a plot of the found peaks
     )
 
 
 # Fits the data with associated curve types
-raman_fitter.FitData(
+raman_fitter_spectral_1.FitData(
         showPlot      = True                        # this will show a plot of the fit data
     )
 
-components  = raman_fitter.comps      # Returns a dictionary of each curve plot
-curveParams = raman_fitter.params     # Returns a dictionary of the parameters of each Lorentzian, Gaussian, or Voigt curve
-bestFitLine = raman_fitter.fit_line   # Returns the plot data of the model
+g_peak_of_spectral_1 = raman_fitter_spectral_1.get_g_peak()
+intensity_y_values_spectral_1 = raman_fitter_spectral_1.get_intensity_y_values()
+raman_shift_x_values_spectral_1 = raman_fitter_spectral_1.get_raman_shift_x_values()
+
+raman_fitter_spectral_2 = RamanFitter_stage_2(
+        x                   = raman_shift_spectral_2,        # a 1D array of the x-axis values
+        y                   = intensity_spectral_2,          # a 1D array of the y-axis values
+        autorun             = False,                         # attempt to calculate all steps and fit a model
+        threshold           = 12,                            # helps the code determine what is a worthy peak and what isn't
+        PercentRange        = 0.11,                          # determines what percent error the fit model can have in regards to the amplitude and position of fit curves under found peaks
+        Sigma               = 15,                            # the expected width of fit curves, in terms of data points
+        SigmaMin            = 3,                             # the expected minimum width allowed of fit curves, in terms of data points
+        SigmaMax            = 50,                            # the expected maximum width allowed of fit curves, in terms of data points
+        txt_file_dictionary = txt_file_dictionary_spectral_2,# a dictionary of (raman_shift: intensity pairs)
+        center_bounds       = center_bounds_spectral_2,      # a dictionary version of peak_index, bounds, and type_of_curve (which type of curve to use for peaks. Options are 'Lorentzian', 'Gaussian', and 'Voigt')
+        filename            = filename_spectral_2            # name of the current file being examined
+)
+
+# Normalizes `y` data to 1
+raman_fitter_spectral_2.NormalizeData()
+
+# Find the peaks in the data
+raman_fitter_spectral_2.FindPeaks(
+        DistBetweenPeaks    = 1,                    # minimum distance between peaks, in terms of data points
+        showPlot            = True                  # this will show a plot of the found peaks
+    )
+
+# Fits the data with associated curve types
+raman_fitter_spectral_2.FitData(
+        showPlot      = True                        # this will show a plot of the fit data
+    )
+
+g_peak_of_spectral_2 = raman_fitter_spectral_2.get_g_peak()
+intensity_y_values_spectral_2 = raman_fitter_spectral_2.get_intensity_y_values()
+raman_shift_x_values_spectral_2 = raman_fitter_spectral_2.get_raman_shift_x_values()
+
+if abs(g_peak_of_spectral_1 - g_peak_of_spectral_2) <= 1:
+
+    # Run Stage 1 code on Spectral 1
+    raman_fitter_spectral_1 = RamanFitter_stage_1(
+        x                   = raman_shift_spectral_1,        # a 1D array of the x-axis values
+        y                   = intensity_spectral_1,          # a 1D array of the y-axis values
+        autorun             = False,                         # attempt to calculate all steps and fit a model
+        threshold           = 12,                            # helps the code determine what is a worthy peak and what isn't
+        PercentRange        = 0.11,                          # determines what percent error the fit model can have in regards to the amplitude and position of fit curves under found peaks
+        Sigma               = 15,                            # the expected width of fit curves, in terms of data points
+        SigmaMin            = 3,                             # the expected minimum width allowed of fit curves, in terms of data points
+        SigmaMax            = 50,                            # the expected maximum width allowed of fit curves, in terms of data points
+        txt_file_dictionary = txt_file_dictionary_spectral_1,# a dictionary of (raman_shift: intensity pairs)
+        center_bounds       = center_bounds_spectral_1,      # a dictionary version of peak_index, bounds, and type_of_curve (which type of curve to use for peaks. Options are 'Lorentzian', 'Gaussian', and 'Voigt')
+        filename            = filename_spectral_1            # name of the current file being examined
+    )
+
+    # Normalizes `y` data to 1
+    raman_fitter_spectral_1.NormalizeData()
+
+    # Find the peaks in the data
+    raman_fitter_spectral_1.FindPeaks(
+            DistBetweenPeaks    = 1,                    # minimum distance between peaks, in terms of data points
+            showPlot            = True                  # this will show a plot of the found peaks
+    )
+
+    # Fits the data with associated curve types
+    raman_fitter_spectral_1.FitData(
+            showPlot      = True                        # this will show a plot of the fit data
+    )
+
+    # Run Stage 1 code on Spectral 2
+    raman_fitter_spectral_2 = RamanFitter_stage_1(
+        x                   = raman_shift_spectral_2,        # a 1D array of the x-axis values
+        y                   = intensity_spectral_2,          # a 1D array of the y-axis values
+        autorun             = False,                         # attempt to calculate all steps and fit a model
+        threshold           = 12,                            # helps the code determine what is a worthy peak and what isn't
+        PercentRange        = 0.11,                          # determines what percent error the fit model can have in regards to the amplitude and position of fit curves under found peaks
+        Sigma               = 15,                            # the expected width of fit curves, in terms of data points
+        SigmaMin            = 3,                             # the expected minimum width allowed of fit curves, in terms of data points
+        SigmaMax            = 50,                            # the expected maximum width allowed of fit curves, in terms of data points
+        txt_file_dictionary = txt_file_dictionary_spectral_2,# a dictionary of (raman_shift: intensity pairs)
+        center_bounds       = center_bounds_spectral_2,      # a dictionary version of peak_index, bounds, and type_of_curve (which type of curve to use for peaks. Options are 'Lorentzian', 'Gaussian', and 'Voigt')
+        filename            = filename_spectral_2            # name of the current file being examined
+    )
+
+    # Normalizes `y` data to 1
+    raman_fitter_spectral_2.NormalizeData()
+
+    # Find the peaks in the data
+    raman_fitter_spectral_2.FindPeaks(
+            DistBetweenPeaks    = 1,                    # minimum distance between peaks, in terms of data points
+            showPlot            = True                  # this will show a plot of the found peaks
+    )
+
+    # Fits the data with associated curve types
+    raman_fitter_spectral_2.FitData(
+            showPlot      = True                        # this will show a plot of the fit data
+    )
+
+
+components_spectral_1  = raman_fitter_spectral_1.comps      # Returns a dictionary of each curve plot
+curveParams_spectral_1 = raman_fitter_spectral_1.params     # Returns a dictionary of the parameters of each Lorentzian, Gaussian, or Voigt curve
+bestFitLine_spectral_1 = raman_fitter_spectral_1.fit_line   # Returns the plot data of the model
+
+components_spectral_2  = raman_fitter_spectral_2.comps      # Returns a dictionary of each curve plot
+curveParams_spectral_2 = raman_fitter_spectral_2.params     # Returns a dictionary of the parameters of each Lorentzian, Gaussian, or Voigt curve
+bestFitLine_spectral_2 = raman_fitter_spectral_2.fit_line   # Returns the plot data of the model
 
 
 '''--------------------------------------Results--------------------------------------'''
-# DataFrame for fitted_data from the data
-df_fitted_data = pd.DataFrame({'Raman Shift': raman_shift, 'Intensity': intensity, 'Best Fit Line': bestFitLine, 'Residual': (bestFitLine - intensity)})
-df_fitted_data.to_excel(f'results/{filename}/fitted_data_{filename}.xlsx', index=False)
+# DataFrame for fitted_data from the Spectral 1
+df_fitted_data_spectral_1 = pd.DataFrame({'Raman Shift': raman_shift_x_values_spectral_1, 'Intensity': intensity_y_values_spectral_1, 'Best Fit Line': bestFitLine_spectral_1, 'Residual': (bestFitLine_spectral_1 - intensity_y_values_spectral_1)})
+df_fitted_data_spectral_1.to_excel(f'results/{filename_spectral_1}/fitted_data_{filename_spectral_1}.xlsx', index=False)
 
-# get the (x,y) values for each curve
-curves_data = {}
-for key in components.keys():
-    curves_data[key] = components[key]
-curves_data['x'] = raman_shift
+# DataFrame for fitted_data from the Spectral 2
+df_fitted_data_spectral_2 = pd.DataFrame({'Raman Shift': raman_shift_x_values_spectral_2, 'Intensity': intensity_y_values_spectral_2, 'Best Fit Line': bestFitLine_spectral_2, 'Residual': (bestFitLine_spectral_2 - intensity_y_values_spectral_2)})
+df_fitted_data_spectral_2.to_excel(f'results/{filename_spectral_2}/fitted_data_{filename_spectral_2}.xlsx', index=False)
 
-# DataFrame for curves_data from the data
-df_curves_data = pd.DataFrame(curves_data)
-df_curves_data.to_excel(f'results/{filename}/curves_data_{filename}.xlsx', index=False)
+# get the (x,y) values for each curve in Spectral 1
+curves_data_spectral_1 = {}
+for key in components_spectral_1.keys():
+    curves_data_spectral_1[key] = components_spectral_1[key]
+curves_data_spectral_1['x'] = raman_shift_x_values_spectral_1
+
+# get the (x,y) values for each curve in Spectral 2
+curves_data_spectral_2 = {}
+for key in components_spectral_2.keys():
+    curves_data_spectral_2[key] = components_spectral_2[key]
+curves_data_spectral_2['x'] = raman_shift_x_values_spectral_2
+
+# DataFrame for curves_data from the Spectral 1
+df_curves_data_spectral_1 = pd.DataFrame(curves_data_spectral_1)
+df_curves_data_spectral_1.to_excel(f'results/{filename_spectral_1}/curves_data_{filename_spectral_1}.xlsx', index=False)
+
+# DataFrame for curves_data from the Spectral 2
+df_curves_data_spectral_2 = pd.DataFrame(curves_data_spectral_2)
+df_curves_data_spectral_2.to_excel(f'results/{filename_spectral_2}/curves_data_{filename_spectral_2}.xlsx', index=False)

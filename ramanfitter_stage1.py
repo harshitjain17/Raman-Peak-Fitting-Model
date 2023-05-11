@@ -19,7 +19,7 @@ from scipy import signal
 from lmfit.models import ExponentialModel, LorentzianModel, GaussianModel, VoigtModel
 import matplotlib.pyplot as plt
 
-class RamanFitter:
+class RamanFitter_stage_1:
 
     """
     A class that fits Raman data with Lorentzian, Gaussian, or Voigt curves
@@ -136,9 +136,8 @@ class RamanFitter:
         """
         self.min_y      = np.min( self.y )
         self.max_y      = np.max( self.y )
-        self.scale      = 1./( self.max_y - self.min_y )
-        self.y          = ( self.y - self.min_y )*self.scale
-
+        self.scale      = 1./( self.max_y )
+        self.y          = ( self.y )*self.scale
         self.threshold  *= self.scale
 
     # Denoise the data
@@ -247,14 +246,19 @@ class RamanFitter:
         for i in range(len(self.filtered_peaks_x)):
             if ((2950 - 20) <= self.filtered_peaks_x[i] <= (2950 + 20)):
                 deNormalized_data_of_2950 = (self.filtered_peaks_y[i]/self.scale) + self.min_y
+                print('inside 2950')
                 break
+        else:
+            return None
         
         # denormalizing the y-value of peak 1600
         for i in range(len(self.filtered_peaks_x)):
             if ((1600 - 20) <= self.filtered_peaks_x[i] <= (1600 + 20)):
                 deNormalized_data_of_1600 = (self.filtered_peaks_y[i]/self.scale) + self.min_y
                 break
-        
+        else:
+            return None
+
         # condition: if the peak intensity for the 2950 cm-1 feature is < 1/100th of the G peak intensity 
         if (deNormalized_data_of_2950 < (1/100 * deNormalized_data_of_1600)):
             
@@ -333,7 +337,7 @@ class RamanFitter:
         self.filtered_peaks_x = []
         self.filtered_peaks_y = []
         self.filtered_npeaks = []
-        counter_for_peaks = {}
+        counter_for_peaks = {} # (x_value_of_peak : number_of_peaks_in_that_region) pairs
 
         # it will later contain peak indices which the software was unable to fit
         remaining_center_bounds = dict(self.center_bounds)
@@ -388,6 +392,7 @@ class RamanFitter:
                     x_min = self.x[0]
             plt.xlim(x_min, x_max)                                                   # set the x-axis limits
             plt.legend()                                                             # set the legends for graph
+            plt.gcf().suptitle(f'Peaks of {self.filename} - Stage 1')                # set the title of the figure
             plt.show()                                                               # show the graph
         
 
@@ -469,6 +474,7 @@ class RamanFitter:
                         x_min = self.x[0]
                 plt.xlim(x_min, x_max)                                                   # set the x-axis limits
                 plt.legend()
+                plt.gcf().suptitle(f'Curves of {self.filename} - Stage 1')               # set the title of the figure
                 plt.show()
 
                 plt.plot( self.x, self.fit_line, label = "Background Removed" )
@@ -510,8 +516,6 @@ class RamanFitter:
                 1D array of the y-values associated with the requested peak curve
 
         """
-
-        #print( self.comps )
 
         # Check if index is within range
         if index > len( self.comps ) or index < -1:
@@ -555,7 +559,7 @@ if __name__ == "__main__":
         x = x[::-1]
         y = y[::-1]
 
-    RF      = RamanFitter( x = x, y = y, autorun = True )                       # Call class
+    RF      = RamanFitter_stage_1( x = x, y = y, autorun = True )                       # Call class
 
     RF.NormalizeData()                                                                                 # Normalize data to 1 (Good for comparisons of other plots and machine learning)
     RF.Denoise( ShowPlot = True )                                                                      # Remove noise from data
