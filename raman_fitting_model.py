@@ -130,7 +130,7 @@ g_peak_of_spectral_2 = raman_fitter_spectral_2.get_g_peak()
 intensity_y_values_spectral_2 = raman_fitter_spectral_2.get_intensity_y_values()
 raman_shift_x_values_spectral_2 = raman_fitter_spectral_2.get_raman_shift_x_values()
 
-if abs(g_peak_of_spectral_1 - g_peak_of_spectral_2) <= 1:
+if abs(g_peak_of_spectral_1 - g_peak_of_spectral_2) < 2:
 
     # Run Stage 1 code on Spectral 1
     raman_fitter_spectral_1 = RamanFitter_stage_1(
@@ -161,6 +161,9 @@ if abs(g_peak_of_spectral_1 - g_peak_of_spectral_2) <= 1:
             showPlot      = True                        # this will show a plot of the fit data
     )
 
+    intensity_y_values_spectral_1 = raman_fitter_spectral_1.get_intensity_y_values()
+    raman_shift_x_values_spectral_1 = raman_fitter_spectral_1.get_raman_shift_x_values()
+
     # Run Stage 1 code on Spectral 2
     raman_fitter_spectral_2 = RamanFitter_stage_1(
         x                   = raman_shift_spectral_2,        # a 1D array of the x-axis values
@@ -190,6 +193,8 @@ if abs(g_peak_of_spectral_1 - g_peak_of_spectral_2) <= 1:
             showPlot      = True                        # this will show a plot of the fit data
     )
 
+    intensity_y_values_spectral_2 = raman_fitter_spectral_2.get_intensity_y_values()
+    raman_shift_x_values_spectral_2 = raman_fitter_spectral_2.get_raman_shift_x_values()
 
 components_spectral_1  = raman_fitter_spectral_1.comps      # Returns a dictionary of each curve plot
 curveParams_spectral_1 = raman_fitter_spectral_1.params     # Returns a dictionary of the parameters of each Lorentzian, Gaussian, or Voigt curve
@@ -205,9 +210,11 @@ bestFitLine_spectral_2 = raman_fitter_spectral_2.fit_line   # Returns the plot d
 df_fitted_data_spectral_1 = pd.DataFrame({'Raman Shift': raman_shift_x_values_spectral_1, 'Intensity': intensity_y_values_spectral_1, 'Best Fit Line': bestFitLine_spectral_1, 'Residual': (bestFitLine_spectral_1 - intensity_y_values_spectral_1)})
 df_fitted_data_spectral_1.to_excel(f'results/{filename_spectral_1}/fitted_data_{filename_spectral_1}.xlsx', index=False)
 
+
 # DataFrame for fitted_data from the Spectral 2
 df_fitted_data_spectral_2 = pd.DataFrame({'Raman Shift': raman_shift_x_values_spectral_2, 'Intensity': intensity_y_values_spectral_2, 'Best Fit Line': bestFitLine_spectral_2, 'Residual': (bestFitLine_spectral_2 - intensity_y_values_spectral_2)})
 df_fitted_data_spectral_2.to_excel(f'results/{filename_spectral_2}/fitted_data_{filename_spectral_2}.xlsx', index=False)
+
 
 # get the (x,y) values for each curve in Spectral 1
 curves_data_spectral_1 = {}
@@ -215,15 +222,16 @@ for key in components_spectral_1.keys():
     curves_data_spectral_1[key] = components_spectral_1[key]
 curves_data_spectral_1['x'] = raman_shift_x_values_spectral_1
 
+# DataFrame for curves_data from the Spectral 1
+df_curves_data_spectral_1 = pd.DataFrame(curves_data_spectral_1)
+df_curves_data_spectral_1.to_excel(f'results/{filename_spectral_1}/curves_data_{filename_spectral_1}.xlsx', index=False)
+
+
 # get the (x,y) values for each curve in Spectral 2
 curves_data_spectral_2 = {}
 for key in components_spectral_2.keys():
     curves_data_spectral_2[key] = components_spectral_2[key]
 curves_data_spectral_2['x'] = raman_shift_x_values_spectral_2
-
-# DataFrame for curves_data from the Spectral 1
-df_curves_data_spectral_1 = pd.DataFrame(curves_data_spectral_1)
-df_curves_data_spectral_1.to_excel(f'results/{filename_spectral_1}/curves_data_{filename_spectral_1}.xlsx', index=False)
 
 # DataFrame for curves_data from the Spectral 2
 df_curves_data_spectral_2 = pd.DataFrame(curves_data_spectral_2)

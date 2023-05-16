@@ -140,6 +140,41 @@ class RamanFitter_stage_1:
         self.y          = ( self.y )*self.scale
         self.threshold  *= self.scale
 
+    def get_raman_shift_x_values(self):
+        
+        """
+            Get the new x-values after cropping the raw data and defining D and G_peaks.
+
+            Parameters
+            ----------
+            None
+
+            Returns
+            -------
+            array
+                The array of x-values of the cropped raw data.
+
+        """
+        return self.x
+
+    def get_intensity_y_values(self):
+        
+        """
+            Get the new y-values after cropping the raw data and defining D and G_peaks.
+
+            Parameters
+            ----------
+            None
+
+            Returns
+            -------
+            array
+                The array of y-values of the cropped raw data.
+
+        """
+        return self.y
+
+
     # Denoise the data
     def Denoise( self,
                 UseFFT          = True,             # (bool)        Use FFT to smooth
@@ -243,13 +278,37 @@ class RamanFitter_stage_1:
         """
 
         # denormalizing the y-value of peak 2950
-        for i in range(len(self.filtered_peaks_x)):
+        length_of_filtered_peaks_x = len(self.filtered_peaks_x)
+        for i in range(length_of_filtered_peaks_x):
             if ((2950 - 20) <= self.filtered_peaks_x[i] <= (2950 + 20)):
                 deNormalized_data_of_2950 = (self.filtered_peaks_y[i]/self.scale) + self.min_y
-                print('inside 2950')
                 break
+        
         else:
-            return None
+
+            # removal of 1620 cm-1 peak
+            for i in range(length_of_filtered_peaks_x):
+                if ((1620 - 20) <= self.filtered_peaks_x[i] <= (1620 + 20)):
+                    print(f'{self.filtered_peaks_x[i]} peak is removed because peak around 2950 does not exist!')
+                    self.filtered_peaks_x.remove(self.filtered_peaks_x[i])
+                    self.filtered_peaks_y.remove(self.filtered_peaks_y[i])
+                    center_bounds_index = self.find_closest_key_index(self.center_bounds, self.filtered_peaks_x[i])
+                    for key in self.center_bounds:
+                        if (center_bounds_index == 0):
+                            del self.center_bounds[key]
+                            break
+                        center_bounds_index-=1
+                     
+                    # updating the center_bounds excel file: it constructs a new excel file
+                    center_bounds_peaks, center_min, center_max, peak_type = [], [], [], []
+                    for peak in self.center_bounds:
+                        center_bounds_peaks.append(peak)
+                        center_min.append(self.center_bounds[peak][0])
+                        center_max.append(self.center_bounds[peak][1])
+                        peak_type.append(self.center_bounds[peak][2])
+                    df_center_bounds_updated = pd.DataFrame({'Peak Index': center_bounds_peaks, 'Center Min': center_min, 'Center Max': center_max, 'Type': peak_type})
+                    df_center_bounds_updated.to_excel(f'results/{self.filename}/center_bounds_{self.filename}_updated.xlsx', index=False)
+                    return None
         
         # denormalizing the y-value of peak 1600
         for i in range(len(self.filtered_peaks_x)):
@@ -269,6 +328,7 @@ class RamanFitter_stage_1:
                 
                 # removal of 2950 cm-1 peak 
                 if ((2950 - 20) <= self.filtered_peaks_x[i] <= (2950 + 20)):
+                    print(f'{self.filtered_peaks_x[i]} peak is removed because peak intensity for the 2950 cm-1 feature is < 1/100th of the G peak intensity!')
                     self.filtered_peaks_x.remove(self.filtered_peaks_x[i])
                     self.filtered_peaks_y.remove(self.filtered_peaks_y[i])
                     center_bounds_index = self.find_closest_key_index(self.center_bounds, self.filtered_peaks_x[i])
@@ -280,6 +340,7 @@ class RamanFitter_stage_1:
 
                 # removal of 1620 cm-1 peak
                 elif ((1620 - 20) <= self.filtered_peaks_x[i] <= (1620 + 20)):
+                    print(f'{self.filtered_peaks_x[i]} peak is removed because peak intensity for the 2950 cm-1 feature is < 1/100th of the G peak intensity!')
                     self.filtered_peaks_x.remove(self.filtered_peaks_x[i])
                     self.filtered_peaks_y.remove(self.filtered_peaks_y[i])
                     center_bounds_index = self.find_closest_key_index(self.center_bounds, self.filtered_peaks_x[i])
@@ -289,16 +350,16 @@ class RamanFitter_stage_1:
                             break
                         center_bounds_index-=1
 
-            # updating the center_bounds excel file: it constructs a new excel file
-            center_bounds_peaks, center_min, center_max, peak_type = [], [], [], []
-            for peak in self.center_bounds:
-                center_bounds_peaks.append(peak)
-                center_min.append(self.center_bounds[peak][0])
-                center_max.append(self.center_bounds[peak][1])
-                peak_type.append(self.center_bounds[peak][2])
-            df_center_bounds_updated = pd.DataFrame({'Peak Index': center_bounds_peaks, 'Center Min': center_min, 'Center Max': center_max, 'Type': peak_type})
-            df_center_bounds_updated.to_excel(f'results/{self.filename}/center_bounds_{self.filename}_updated.xlsx', index=False)
-
+                # updating the center_bounds excel file: it constructs a new excel file
+                center_bounds_peaks, center_min, center_max, peak_type = [], [], [], []
+                for peak in self.center_bounds:
+                    center_bounds_peaks.append(peak)
+                    center_min.append(self.center_bounds[peak][0])
+                    center_max.append(self.center_bounds[peak][1])
+                    peak_type.append(self.center_bounds[peak][2])
+                df_center_bounds_updated = pd.DataFrame({'Peak Index': center_bounds_peaks, 'Center Min': center_min, 'Center Max': center_max, 'Type': peak_type})
+                df_center_bounds_updated.to_excel(f'results/{self.filename}/center_bounds_{self.filename}_updated.xlsx', index=False)
+                return None
 
     # Find the peaks in the data
     def FindPeaks( self, DistBetweenPeaks = 50, showPlot = False ):
