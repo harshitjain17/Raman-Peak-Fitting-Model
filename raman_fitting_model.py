@@ -215,6 +215,7 @@ df_fitted_data_spectral_1 = pd.DataFrame({'Raman Shift': raman_shift_x_values_sp
 df_fitted_data_spectral_1.to_excel(f'results/{filename_spectral_1}/fitted_data_{filename_spectral_1}.xlsx', index=False)
 
 if (spectral_2):
+    
     # DataFrame for fitted_data from the Spectral 2
     df_fitted_data_spectral_2 = pd.DataFrame({'Raman Shift': raman_shift_x_values_spectral_2, 'Intensity': intensity_y_values_spectral_2, 'Best Fit Line': bestFitLine_spectral_2, 'Residual': (bestFitLine_spectral_2 - intensity_y_values_spectral_2)})
     df_fitted_data_spectral_2.to_excel(f'results/{filename_spectral_2}/fitted_data_{filename_spectral_2}.xlsx', index=False)
@@ -231,6 +232,7 @@ df_curves_data_spectral_1 = pd.DataFrame(curves_data_spectral_1)
 df_curves_data_spectral_1.to_excel(f'results/{filename_spectral_1}/curves_data_{filename_spectral_1}.xlsx', index=False)
 
 if (spectral_2):
+
     # get the (x,y) values for each curve in Spectral 2
     curves_data_spectral_2 = {}
     for key in components_spectral_2.keys():
