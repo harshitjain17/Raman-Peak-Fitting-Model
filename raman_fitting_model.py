@@ -96,7 +96,10 @@ raman_fitter_spectral_1.FitData(
         showPlot      = True                        # this will show a plot of the fit data
     )
 
-g_peak_of_spectral_1 = raman_fitter_spectral_1.get_g_peak()
+try:
+    g_peak_of_spectral_1 = raman_fitter_spectral_1.get_g_peak()
+except:
+    pass
 intensity_y_values_spectral_1 = raman_fitter_spectral_1.get_intensity_y_values()
 raman_shift_x_values_spectral_1 = raman_fitter_spectral_1.get_raman_shift_x_values()
 
@@ -134,7 +137,9 @@ if (spectral_2):
     raman_shift_x_values_spectral_2 = raman_fitter_spectral_2.get_raman_shift_x_values()
 
     if abs(g_peak_of_spectral_1 - g_peak_of_spectral_2) < 2:
-
+        
+        print('Stage 1 code is running now because there is no change in the G-Peak position ( < 2 cm-1 ) between both spectral files')
+        
         # Run Stage 1 code on Spectral 1
         raman_fitter_spectral_1 = RamanFitter_stage_1(
             x                   = raman_shift_spectral_1,        # a 1D array of the x-axis values

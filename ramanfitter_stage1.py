@@ -1,9 +1,7 @@
 '''
-    Name:           RamanFitter
+    Name:           raman_fitting_model
 
     Description:    RamanFitter takes the input of a single raman measurement and applies common fitting techniques to solve for Lorentzians, Gaussian, or Voigt curves.
-
-    Author:         John Ferrier, NEU Physics, 2022
 
 '''
 
@@ -435,7 +433,6 @@ class RamanFitter_stage_1:
         self.npeaks = self.filtered_npeaks
         self.peaks_x = self.filtered_peaks_x
         self.peaks_y = self.filtered_peaks_y
-
         # showing the plot
         if showPlot:
             plt.plot( self.x, self.y, color = 'c', label = 'Data' )                  # plot the curve
