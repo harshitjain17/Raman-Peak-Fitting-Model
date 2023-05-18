@@ -1,4 +1,4 @@
-# **HiLite: AI AutoHighlighter**
+# **Raman Fitting Model**
 
 # About the Project: 📚
 The Raman Fitting Library is a comprehensive software package designed to facilitate the analysis and fitting of Raman spectra. Raman spectroscopy is a powerful technique used in various scientific and industrial applications to study molecular vibrations and obtain structural information about materials.
