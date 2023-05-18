@@ -447,7 +447,7 @@ class RamanFitter_stage_1:
             line = plt.gca().get_lines()[0]                                          # get the first Line2D object
             peaks_y = line.get_ydata()[np.searchsorted(self.x, remaining_peaks_x)]   # get the y-values of remaining peaks which software did not find
             self.peaks_y.extend(peaks_y)                                             # adding the list of y-values of peaks founded by the user
-            self.stage_1_prerequisite_2950_1620()                                    # calling the stage_1 prerequisite function for removing the peak on a condition
+            self.stage_1_prerequisite_2950_1620_removal()                                    # calling the stage_1 prerequisite function for removing the peak on a condition
             plt.scatter( self.peaks_x, self.peaks_y, color = 'k', label = 'Peaks' )  # scatter the peaks
             if (len(self.peaks_x) > 0):
                 x_min = min(self.peaks_x) - 200                                      # defining the lower x-limit 

@@ -5,11 +5,6 @@
 
 '''
 
-__author__  = "John Ferrier"
-__email__   = "jo.ferrier@northeastern.edu"
-__status__  = "planning"
-
-
 import os
 import numpy as np
 import pandas as pd
