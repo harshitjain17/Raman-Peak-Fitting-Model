@@ -5,11 +5,6 @@
 
 '''
 
-__author__  = "John Ferrier"
-__email__   = "jo.ferrier@northeastern.edu"
-__status__  = "planning"
-
-
 import os
 import numpy as np
 import pandas as pd
@@ -249,6 +244,8 @@ class RamanFitter_stage_1:
 
     def find_closest_key_index(self, dictionary, value):
         """
+            find_closest_key_index(self, dictionary, value)
+            
             Find the index of the closest key in the dictionary to the given number
             
             Parameters
@@ -269,10 +266,12 @@ class RamanFitter_stage_1:
                 closest_key = key
         return list(dictionary.keys()).index(closest_key)+1
     
-    def stage_1_prerequisite_2950_1620(self):
+    def stage_1_prerequisite_2950_1620_removal(self):
         """
-            If the peak intensity for the 2950 cm-1 feature is < 1/100 the G peak intensity, we will need to remove the 2950 cm-1 peak and the 1620 cm-1 peak from the original center bounds excel file,
-            and omit those peaks from the peak fitting procedure. If the peak intensity for 2950 cm-1 is > 1/100 the G peak intensity, we can use the "stage 1" code as-is.
+            stage_1_prerequisite_2950_1620(self)
+
+            If the peak intensity for the 2950 cm-1 feature is < (1/100) of the G peak intensity, we will need to remove the 2950 cm-1 peak and the 1620 cm-1 peak from the original center bounds excel file,
+            and omit those peaks from the peak fitting procedure. If the peak intensity for 2950 cm-1 is > (1/100) of the G peak intensity, we can use the "stage 1" code as-is.
         """
 
         # denormalizing the y-value of peak 2950
@@ -379,6 +378,7 @@ class RamanFitter_stage_1:
         """
 
         print( "Finding Peaks..." )
+        
         # Find Peaks
         peaks, _  = signal.find_peaks( self.y, distance = DistBetweenPeaks )
         
@@ -389,14 +389,21 @@ class RamanFitter_stage_1:
         prominence = signal.peak_prominences( self.y, peaks, wlen = len( self.x )-1 )[0]
         rem_ind = [ i for ( i, p ) in enumerate( prominence ) if p < self.threshold ]
         
-        self.npeaks = np.delete( peaks, rem_ind ) # stores the indices of the peaks found        
+        # stores the indices of the peaks found
+        self.npeaks = np.delete( peaks, rem_ind )      
+        
+        # stores the x-values of the peak
         self.peaks_y = np.array( [ self.y[i] for i in self.npeaks ] )
+        
+        # stores the y-values of the peak
         self.peaks_x = np.array( [ self.x[i] for i in self.npeaks ] )
         
         self.filtered_peaks_x = []
         self.filtered_peaks_y = []
         self.filtered_npeaks = []
-        counter_for_peaks = {} # (x_value_of_peak : number_of_peaks_in_that_region) pairs
+        
+        # (x_value_of_peak : number_of_peaks_in_that_region) pairs
+        counter_for_peaks = {}
 
         # it will later contain peak indices which the software was unable to fit
         remaining_center_bounds = dict(self.center_bounds)
@@ -433,6 +440,7 @@ class RamanFitter_stage_1:
         self.npeaks = self.filtered_npeaks
         self.peaks_x = self.filtered_peaks_x
         self.peaks_y = self.filtered_peaks_y
+        
         # showing the plot
         if showPlot:
             plt.plot( self.x, self.y, color = 'c', label = 'Data' )                  # plot the curve
@@ -515,10 +523,7 @@ class RamanFitter_stage_1:
                 plt.plot( self.x, self.fit_line, label = "Fit Model", linewidth = 1 )
                 
                 for i, l in enumerate( self.comps.items() ):
-                    plt.plot( self.x, l[1], label = f"Curve {i+1}", lw = 1, linestyle = 'dotted' )
-                    # if (i < len(self.peaks_x)):
-                    #     plt.text(self.peaks_x[i], self.peaks_y[i], f"Curve {i+1}")
-                        
+                    plt.plot( self.x, l[1], label = f"Curve {i+1}", lw = 1, linestyle = 'dotted' ) 
                 plt.xlabel( 'cm^-1' )
                 plt.ylabel( 'Intensity' )
                 plt.grid(True)
