@@ -166,6 +166,8 @@ class RamanFitter_stage_2:
     def get_raman_shift_x_values(self):
         
         """
+            get_raman_shift_x_values(self)
+
             Get the new x-values after cropping the raw data and defining D and G_peaks.
 
             Parameters
@@ -183,6 +185,8 @@ class RamanFitter_stage_2:
     def get_intensity_y_values(self):
         
         """
+            get_intensity_y_values(self)
+
             Get the new y-values after cropping the raw data and defining D and G_peaks.
 
             Parameters
@@ -273,6 +277,8 @@ class RamanFitter_stage_2:
 
     def find_closest_key_index(self, dictionary, value):
         """
+            find_closest_key_index(self, dictionary, value)
+
             Find the index of the closest key in the dictionary to the given number
             
             Parameters
@@ -312,6 +318,7 @@ class RamanFitter_stage_2:
         """
 
         print( "Finding Peaks..." )
+        
         # Find Peaks
         peaks, _  = signal.find_peaks( self.y, distance = DistBetweenPeaks )
         
@@ -328,9 +335,6 @@ class RamanFitter_stage_2:
         self.filtered_peaks_x = []
         self.filtered_peaks_y = []
         self.filtered_npeaks = []
-
-        # # it will later contain peak indices of D-Peak and G-Peak if the software was unable to fit
-        # remaining_center_bounds = dict(self.center_bounds)
 
         # dictionary - (type_of_peak(D/G) : number_of_peaks_in_that_region) pairs
         counter_for_peaks = {'D-Peak' : 0, 'G-Peak' : 0}
@@ -363,13 +367,6 @@ class RamanFitter_stage_2:
                         self.filtered_npeaks.append(peak_index)          # filling the data point in self.npeaks
                         counter_for_peaks['G-Peak'] += 1                 # increase the counter of peaks in that specific region by 1 (final) - it should not be more than 1
         
-        # remaining_peaks_x = []                                                               # Create an empty list to store remaining peaks x-values
-        # for x_value in remaining_center_bounds:                                              # Iterate through each x-value in the remaining_center_bounds list
-        #     self.filtered_peaks_x.append(x_value)                                            # Append the remaining x-values to the filtered_peaks_x list - now your list of peaks is complete
-        #     remaining_peaks_x.append(x_value)                                                # Append the remaining x-values to the remaining_peaks_x list
-        #     closest_x_index = self.find_closest_key_index(self.txt_file_dictionary, x_value) # Find the closest key-index (data point) in the txt_file_dictionary to the current x-value
-        #     self.filtered_npeaks.append(closest_x_index)                                     # Append the closest key to the filtered_npeaks list                
-        
         self.npeaks = self.filtered_npeaks
         self.peaks_x = self.filtered_peaks_x
         self.peaks_y = self.filtered_peaks_y
@@ -390,9 +387,6 @@ class RamanFitter_stage_2:
         if showPlot:
             plt.plot( self.x[:data_point], self.y[:data_point], color = 'c', label = 'D-peak' )     # plot the curve D-Peak
             plt.plot( self.x[data_point+1:], self.y[data_point+1:], color = 'c', label = 'G-Peak' ) # plot the curve G-Peak
-            # line = plt.gca().get_lines()[0]                                                         # get the first Line2D object
-            # peaks_y = line.get_ydata()[np.searchsorted(self.x, remaining_peaks_x)]                  # get the y-values of remaining peaks which software did not find
-            # self.peaks_y.extend(peaks_y)                                                            # adding the list of y-values of peaks founded by the user
             plt.scatter( self.peaks_x, self.peaks_y, color = 'k', label = 'Peaks' )                 # scatter the peaks
             if (len(self.peaks_x) > 0):
                 x_min = min(self.peaks_x) - 200                                                     # defining the lower x-limit 
@@ -440,24 +434,23 @@ class RamanFitter_stage_2:
             # Cycle through each peak to fit the required type
             i = 0
             MARGIN = 5
+
+            assert len(self.center_bounds) == 2, "Center bounds has more than 2 peaks. It should only have 2 peaks in it. Try print the self.center_bounds to see which peak(s) is/are extra."
             
             for key in self.center_bounds:
-                
-                type = self.center_bounds[key][2]
-
+                curve_type = self.center_bounds[key][2]
                 pref = 'Curve_'+str(i+1)+'_'
-                if (type == 'Lorentzian'):
+                if (curve_type == 'Lorentzian'):
                     Model_list.append( LorentzianModel( prefix = pref ) )
-                elif (type == 'Gaussian'):
+                elif (curve_type == 'Gaussian'):
                     Model_list.append( GaussianModel( prefix = pref ) )
-                elif (type == 'Voigt'):
+                elif (curve_type == 'Voigt'):
                     Model_list.append( VoigtModel( prefix = pref ) )
 
                 pars.update( Model_list[i].make_params() )
                 pars[pref+'center'].set(value = (self.peaks_x[i]), min = (self.peaks_x[i] - MARGIN),  max = (self.peaks_x[i] + MARGIN))
                 pars[pref+'sigma'].set(value = (self.sigmas[0]), min = (self.sigmas[1]), max = (self.sigmas[2]))
                 pars[pref+'amplitude'].set(value = (self.y_old[self.npeaks[i]]), min = (self.y_old[self.npeaks[i]]*(1. - self.perc_range)))
-                
                 mod = (mod + Model_list[i]) if mod else (Model_list[i])
                 i+=1
 
@@ -465,7 +458,7 @@ class RamanFitter_stage_2:
             self.fit_line   = out.best_fit
             self.params     = out.params
             self.comps      = out.eval_components( x = self.x )         # comps[pref]  = specific lorentz curve from best_fit
-
+            
             for i in range(len(self.x)):
                 if (self.x[i] > 1400):
                     data_point = i
@@ -473,15 +466,10 @@ class RamanFitter_stage_2:
 
             if showPlot:
                 plt.plot( self.x[:data_point], self.y_old[:data_point], color = 'c', label = 'D-peak' )                # plot the curve D-Peak
-                plt.plot( self.x[data_point+1:], self.y_old[data_point+1:], color = 'c', label = 'G-Peak' )                # plot the curve G-Peak
-            
+                plt.plot( self.x[data_point+1:], self.y_old[data_point+1:], color = 'c', label = 'G-Peak' )            # plot the curve G-Peak
                 plt.plot( self.x, self.fit_line, label = "Fit Model", linewidth = 1 )
-                
                 for i, l in enumerate( self.comps.items() ):
                     plt.plot( self.x, l[1], label = f"Curve {i+1}", lw = 1, linestyle = 'dotted' )
-                    # if (i < len(self.peaks_x)):
-                    #     plt.text(self.peaks_x[i], self.peaks_y[i], f"Curve {i+1}")
-                        
                 plt.xlabel( 'cm^-1' )
                 plt.ylabel( 'Intensity' )
                 plt.grid(True)
@@ -522,6 +510,8 @@ class RamanFitter_stage_2:
     def set_g_peak(self, x_value):
         
         """
+            set_g_peak(self, x_value)
+
             Set the x-value of the G peak.
 
             Parameters
@@ -540,6 +530,8 @@ class RamanFitter_stage_2:
     def get_g_peak(self):
         
         """
+            get_g_peak(self)
+            
             Get the x-value of the G peak.
 
             Parameters
